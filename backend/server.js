@@ -31,13 +31,6 @@ const initDb = () => {
       keywords TEXT DEFAULT ''
     )`);
 
-    db.run(`CREATE TABLE IF NOT EXISTS income (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      amount REAL NOT NULL,
-      source TEXT,
-      date TEXT DEFAULT (datetime('now'))
-    )`);
-
     db.run(`CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       amount REAL NOT NULL,
@@ -138,53 +131,71 @@ app.get('/accounts/:id', (req, res) => {
   });
 });
 
-// Add income and allocate across accounts
-app.post('/income', (req, res) => {
-  const { amount, source } = req.body;
-  if (!amount || isNaN(amount)) {
-    return res.status(400).json({ error: 'Amount is required and must be a number.' });
+// POST /transactions: handles both income and expense
+app.post('/transactions', (req, res) => {
+  const { amount, description, type, account_id } = req.body;
+  if (!amount || isNaN(amount) || !type) {
+    return res.status(400).json({ error: 'Amount and type are required.' });
   }
-  // Insert into income table
-  db.run(
-    'INSERT INTO income (amount, source) VALUES (?, ?)',
-    [amount, source || ''],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      const incomeId = this.lastID;
-      // Fetch all accounts
-      db.all('SELECT * FROM accounts', [], (err, accounts) => {
+
+  if (type === 'income') {
+    // 1. Create a transaction for the total income (no account_id)
+    db.run(
+      'INSERT INTO transactions (amount, description, type) VALUES (?, ?, ?)',
+      [amount, description || '', 'income'],
+      function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
-        // Prepare transactions for each account
-        const transactions = accounts.map((account) => {
-          const allocated = (amount * account.percentage) / 100;
-          return {
-            amount: allocated,
-            account_id: account.id,
-            description: 'Income allocation',
-            source: source || '',
-            type: 'income',
-          };
-        });
-        // Insert all transactions
-        const stmt = db.prepare(
-          'INSERT INTO transactions (amount, account_id, description, source, type) VALUES (?, ?, ?, ?, ?)'
-        );
-        transactions.forEach((t) => {
-          stmt.run([t.amount, t.account_id, t.description, t.source, t.type]);
-        });
-        stmt.finalize((err) => {
+        const totalIncomeId = this.lastID;
+        // 2. Fetch all accounts and allocate
+        db.all('SELECT * FROM accounts', [], (err, accounts) => {
           if (err) {
             return res.status(500).json({ error: err.message });
           }
-          res.status(201).json({ incomeId, allocated: transactions });
+          const allocations = accounts.map((account) => {
+            const allocated = (amount * account.percentage) / 100;
+            return {
+              amount: allocated,
+              account_id: account.id,
+              description: 'Income allocation',
+              type: 'income',
+            };
+          });
+          // Insert allocation transactions
+          const stmt = db.prepare(
+            'INSERT INTO transactions (amount, account_id, description, type) VALUES (?, ?, ?, ?)'
+          );
+          allocations.forEach((t) => {
+            stmt.run([t.amount, t.account_id, t.description, t.type]);
+          });
+          stmt.finalize((err) => {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ totalIncomeId, allocations });
+          });
         });
-      });
+      }
+    );
+  } else if (type === 'expense') {
+    // For expense, account_id is required
+    if (!account_id) {
+      return res.status(400).json({ error: 'account_id is required for expenses.' });
     }
-  );
+    db.run(
+      'INSERT INTO transactions (amount, account_id, description, type) VALUES (?, ?, ?, ?)',
+      [amount, account_id, description || '', 'expense'],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ id: this.lastID, amount, account_id, description, type: 'expense' });
+      }
+    );
+  } else {
+    res.status(400).json({ error: 'Invalid type. Must be income or expense.' });
+  }
 });
 
 // Get all transactions with account name
