@@ -10,13 +10,6 @@ function TransactionList() {
   const pageSize = 20;
   const [expanded, setExpanded] = useState({});
   const [editRows, setEditRows] = useState({});
-  const [columnWidths, setColumnWidths] = useState({
-    date: 110,
-    amount: 120,
-    account: 140,
-    description: 260,
-    notes: 260,
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -97,31 +90,6 @@ function TransactionList() {
   const pagedTransactions = baseTransactions.slice((page - 1) * pageSize, page * pageSize);
   const grouped = groupByMonth(pagedTransactions);
   const sortedMonths = Object.keys(grouped).sort((a, b) => b.localeCompare(a)); // Descending
-
-  const handleColumnResizeMouseDown = (columnKey, event) => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const th = event.currentTarget.parentElement;
-    const startWidth =
-      columnWidths[columnKey] || (th ? th.getBoundingClientRect().width : 120);
-
-    const onMouseMove = (e) => {
-      const delta = e.clientX - startX;
-      const newWidth = Math.max(80, startWidth + delta);
-      setColumnWidths((prev) => ({
-        ...prev,
-        [columnKey]: newWidth,
-      }));
-    };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
 
   const handleFieldChange = (tx, field, value) => {
     setEditRows((prev) => ({
@@ -250,94 +218,15 @@ function TransactionList() {
         <p>No transactions found.</p>
       ) : (
         <>
-          <table style={{ width: '100%', tableLayout: 'fixed' }}>
+          <table>
             <thead>
               <tr>
                 <th></th>
-                <th
-                  style={{ position: 'relative', width: columnWidths.date, minWidth: 80 }}
-                >
-                  Date
-                  <span
-                    onMouseDown={(e) => handleColumnResizeMouseDown('date', e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      cursor: 'col-resize',
-                    }}
-                  />
-                </th>
-                <th
-                  style={{ position: 'relative', width: columnWidths.amount, minWidth: 100 }}
-                >
-                  Amount
-                  <span
-                    onMouseDown={(e) => handleColumnResizeMouseDown('amount', e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      cursor: 'col-resize',
-                    }}
-                  />
-                </th>
-                <th
-                  style={{ position: 'relative', width: columnWidths.account, minWidth: 120 }}
-                >
-                  Account
-                  <span
-                    onMouseDown={(e) => handleColumnResizeMouseDown('account', e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      cursor: 'col-resize',
-                    }}
-                  />
-                </th>
-                <th
-                  style={{
-                    position: 'relative',
-                    width: columnWidths.description,
-                    minWidth: 200,
-                  }}
-                >
-                  Description
-                  <span
-                    onMouseDown={(e) => handleColumnResizeMouseDown('description', e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      cursor: 'col-resize',
-                    }}
-                  />
-                </th>
-                <th
-                  style={{ position: 'relative', width: columnWidths.notes, minWidth: 200 }}
-                >
-                  Notes
-                  <span
-                    onMouseDown={(e) => handleColumnResizeMouseDown('notes', e)}
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 4,
-                      cursor: 'col-resize',
-                    }}
-                  />
-                </th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Account</th>
+                <th>Description</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -345,7 +234,7 @@ function TransactionList() {
                 const [year, month] = monthKey.split('-');
                 return [
                   <tr key={monthKey} style={{ background: '#edf2f7' }}>
-                    <td colSpan={7} style={{ fontWeight: 'bold' }}>
+                    <td colSpan={6} style={{ fontWeight: 'bold' }}>
                       {monthNames[parseInt(month, 10) - 1]} {year}
                     </td>
                   </tr>,
@@ -376,20 +265,8 @@ function TransactionList() {
                             </button>
                           )}
                         </td>
-                        <td
-                          style={{
-                            width: columnWidths.date,
-                            minWidth: 80,
-                          }}
-                        >
-                          {formatDate(t.date)}
-                        </td>
-                        <td
-                          style={{
-                            width: columnWidths.amount,
-                            minWidth: 100,
-                          }}
-                        >
+                        <td>{formatDate(t.date)}</td>
+                        <td>
                           <input
                             type="text"
                             value={
@@ -409,18 +286,9 @@ function TransactionList() {
                             }}
                           />
                         </td>
+                        <td>{t.account_name || t.account_id}</td>
                         <td
                           style={{
-                            width: columnWidths.account,
-                            minWidth: 120,
-                          }}
-                        >
-                          {t.account_name || t.account_id}
-                        </td>
-                        <td
-                          style={{
-                            width: columnWidths.description,
-                            minWidth: 200,
                             verticalAlign: 'top',
                             cursor: editRows[t.id]?.isEditingDescription ? 'text' : 'pointer',
                           }}
@@ -482,8 +350,6 @@ function TransactionList() {
                         </td>
                         <td
                           style={{
-                            width: columnWidths.notes,
-                            minWidth: 200,
                             verticalAlign: 'top',
                             cursor: editRows[t.id]?.isEditingNotes ? 'text' : 'pointer',
                           }}
@@ -549,20 +415,8 @@ function TransactionList() {
                         rows.push(
                           <tr key={`${t.id}-${a.id}`} className="trans-income">
                             <td></td>
-                            <td
-                              style={{
-                                width: columnWidths.date,
-                                minWidth: 80,
-                              }}
-                            >
-                              {formatDate(a.date)}
-                            </td>
-                            <td
-                              style={{
-                                width: columnWidths.amount,
-                                minWidth: 100,
-                              }}
-                            >
+                            <td>{formatDate(a.date)}</td>
+                            <td>
                               <input
                                 type="text"
                                 value={
@@ -582,18 +436,9 @@ function TransactionList() {
                                 }}
                               />
                             </td>
+                            <td>{a.account_name || a.account_id}</td>
                             <td
                               style={{
-                                width: columnWidths.account,
-                                minWidth: 120,
-                              }}
-                            >
-                              {a.account_name || a.account_id}
-                            </td>
-                            <td
-                              style={{
-                                width: columnWidths.description,
-                                minWidth: 200,
                                 verticalAlign: 'top',
                                 cursor: editRows[a.id]?.isEditingDescription
                                   ? 'text'
@@ -659,8 +504,6 @@ function TransactionList() {
                             </td>
                             <td
                               style={{
-                                width: columnWidths.notes,
-                                minWidth: 200,
                                 verticalAlign: 'top',
                                 cursor: editRows[a.id]?.isEditingNotes
                                   ? 'text'
