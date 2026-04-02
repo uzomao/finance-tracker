@@ -153,3 +153,17 @@ export async function createExpense({ amount, description = '', account_id, note
   });
   return { id, amount, description, type: 'expense', account_id: Number(account_id), notes };
 }
+
+export async function updateTransaction(id, updates) {
+  const db = await getDb();
+  const existing = await db.get(STORES.TRANSACTIONS, Number(id));
+  if (!existing) return null;
+
+  const updated = {
+    ...existing,
+    ...updates,
+  };
+
+  await db.put(STORES.TRANSACTIONS, updated);
+  return updated;
+}

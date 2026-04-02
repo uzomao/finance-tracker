@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTransactions } from '../data/db';
+import { getTransactions, updateTransaction } from '../data/db';
 import { formatDate } from './TransactionForm';
 
 function TransactionList() {
@@ -9,6 +9,7 @@ function TransactionList() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [expanded, setExpanded] = useState({});
+  const [editRows, setEditRows] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +86,76 @@ function TransactionList() {
   const grouped = groupByMonth(pagedTransactions);
   const sortedMonths = Object.keys(grouped).sort((a, b) => b.localeCompare(a)); // Descending
 
+  const handleFieldChange = (tx, field, value) => {
+    setEditRows((prev) => ({
+      ...prev,
+      [tx.id]: {
+        amountText:
+          field === 'amount'
+            ? value
+            : prev[tx.id]?.amountText ?? String(tx.amount ?? ''),
+        description:
+          field === 'description'
+            ? value
+            : prev[tx.id]?.description ?? (tx.description ?? ''),
+        notes:
+          field === 'notes'
+            ? value
+            : prev[tx.id]?.notes ?? (tx.notes ?? tx.source ?? ''),
+        dirty: true,
+      },
+    }));
+  };
+
+  const handleBlurSave = async (tx) => {
+    const current = editRows[tx.id];
+    if (!current || !current.dirty) return;
+
+    const updates = {};
+
+    if (current.amountText != null) {
+      const numericAmount = parseFloat(String(current.amountText).replace(/,/g, ''));
+      if (!Number.isNaN(numericAmount) && numericAmount !== tx.amount) {
+        updates.amount = numericAmount;
+      }
+    }
+
+    if (current.description != null && current.description !== tx.description) {
+      updates.description = current.description;
+    }
+
+    const currentNotes = current.notes ?? '';
+    const originalNotes = tx.notes ?? tx.source ?? '';
+    if (currentNotes !== originalNotes) {
+      updates.notes = currentNotes;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      setEditRows((prev) => ({
+        ...prev,
+        [tx.id]: { ...prev[tx.id], dirty: false },
+      }));
+      return;
+    }
+
+    try {
+      const updated = await updateTransaction(tx.id, updates);
+      if (!updated) {
+        setError('Failed to update transaction');
+        return;
+      }
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === tx.id ? { ...t, ...updates } : t))
+      );
+      setEditRows((prev) => ({
+        ...prev,
+        [tx.id]: { ...prev[tx.id], dirty: false },
+      }));
+    } catch (e) {
+      setError('Failed to update transaction');
+    }
+  };
+
   if (loading) return <p>Loading transactions...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
@@ -148,10 +219,56 @@ function TransactionList() {
                           )}
                         </td>
                         <td>{formatDate(t.date)}</td>
-                        <td>{naira.format(t.amount)}</td>
+                        <td>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={
+                              editRows[t.id]?.amountText ??
+                              (t.amount !== undefined && t.amount !== null
+                                ? String(t.amount)
+                                : '')
+                            }
+                            onChange={(e) => handleFieldChange(t, 'amount', e.target.value)}
+                            onBlur={() => handleBlurSave(t)}
+                            style={{
+                              width: '100%',
+                              border: 'none',
+                              outline: 'none',
+                              background: 'transparent',
+                              textAlign: 'right',
+                            }}
+                          />
+                        </td>
                         <td>{t.account_name || t.account_id}</td>
-                        <td>{t.description}</td>
-                        <td>{t.notes || t.source || ''}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={editRows[t.id]?.description ?? (t.description ?? '')}
+                            onChange={(e) => handleFieldChange(t, 'description', e.target.value)}
+                            onBlur={() => handleBlurSave(t)}
+                            style={{
+                              width: '100%',
+                              border: 'none',
+                              outline: 'none',
+                              background: 'transparent',
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={editRows[t.id]?.notes ?? (t.notes ?? t.source ?? '')}
+                            onChange={(e) => handleFieldChange(t, 'notes', e.target.value)}
+                            onBlur={() => handleBlurSave(t)}
+                            style={{
+                              width: '100%',
+                              border: 'none',
+                              outline: 'none',
+                              background: 'transparent',
+                            }}
+                          />
+                        </td>
                       </tr>,
                     ];
 
@@ -161,10 +278,56 @@ function TransactionList() {
                           <tr key={`${t.id}-${a.id}`} className="trans-income">
                             <td></td>
                             <td>{formatDate(a.date)}</td>
-                            <td>{naira.format(a.amount)}</td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={
+                                  editRows[a.id]?.amountText ??
+                                  (a.amount !== undefined && a.amount !== null
+                                    ? String(a.amount)
+                                    : '')
+                                }
+                                onChange={(e) => handleFieldChange(a, 'amount', e.target.value)}
+                                onBlur={() => handleBlurSave(a)}
+                                style={{
+                                  width: '100%',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                  textAlign: 'right',
+                                }}
+                              />
+                            </td>
                             <td>{a.account_name || a.account_id}</td>
-                            <td>{a.description}</td>
-                            <td>{a.notes || ''}</td>
+                            <td>
+                              <input
+                                type="text"
+                                value={editRows[a.id]?.description ?? (a.description ?? '')}
+                                onChange={(e) => handleFieldChange(a, 'description', e.target.value)}
+                                onBlur={() => handleBlurSave(a)}
+                                style={{
+                                  width: '100%',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={editRows[a.id]?.notes ?? (a.notes ?? '')}
+                                onChange={(e) => handleFieldChange(a, 'notes', e.target.value)}
+                                onBlur={() => handleBlurSave(a)}
+                                style={{
+                                  width: '100%',
+                                  border: 'none',
+                                  outline: 'none',
+                                  background: 'transparent',
+                                }}
+                              />
+                            </td>
                             <td>{a.type}</td>
                           </tr>
                         );
