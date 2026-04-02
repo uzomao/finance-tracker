@@ -10,6 +10,13 @@ function TransactionList() {
   const pageSize = 20;
   const [expanded, setExpanded] = useState({});
   const [editRows, setEditRows] = useState({});
+  const [columnWidths, setColumnWidths] = useState({
+    date: 110,
+    amount: 120,
+    account: 140,
+    description: 260,
+    notes: 260,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +45,11 @@ function TransactionList() {
     style: 'currency',
     currency: 'NGN',
     minimumFractionDigits: 2,
+  });
+
+  const plainAmountFormatter = new Intl.NumberFormat('en-NG', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
   // Calculate totals
@@ -86,6 +98,31 @@ function TransactionList() {
   const grouped = groupByMonth(pagedTransactions);
   const sortedMonths = Object.keys(grouped).sort((a, b) => b.localeCompare(a)); // Descending
 
+  const handleColumnResizeMouseDown = (columnKey, event) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const th = event.currentTarget.parentElement;
+    const startWidth =
+      columnWidths[columnKey] || (th ? th.getBoundingClientRect().width : 120);
+
+    const onMouseMove = (e) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(80, startWidth + delta);
+      setColumnWidths((prev) => ({
+        ...prev,
+        [columnKey]: newWidth,
+      }));
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
   const handleFieldChange = (tx, field, value) => {
     setEditRows((prev) => ({
       ...prev,
@@ -133,7 +170,7 @@ function TransactionList() {
     if (Object.keys(updates).length === 0) {
       setEditRows((prev) => ({
         ...prev,
-        [tx.id]: { ...prev[tx.id], dirty: false },
+        [tx.id]: { ...prev[tx.id], dirty: false, amountText: undefined },
       }));
       return;
     }
@@ -191,7 +228,7 @@ function TransactionList() {
       });
       setEditRows((prev) => ({
         ...prev,
-        [tx.id]: { ...prev[tx.id], dirty: false },
+        [tx.id]: { ...prev[tx.id], dirty: false, amountText: undefined },
       }));
     } catch (e) {
       setError('Failed to update transaction');
@@ -213,15 +250,94 @@ function TransactionList() {
         <p>No transactions found.</p>
       ) : (
         <>
-          <table>
+          <table style={{ width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr>
                 <th></th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Account</th>
-                <th>Description</th>
-                <th>Notes</th>
+                <th
+                  style={{ position: 'relative', width: columnWidths.date, minWidth: 80 }}
+                >
+                  Date
+                  <span
+                    onMouseDown={(e) => handleColumnResizeMouseDown('date', e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      cursor: 'col-resize',
+                    }}
+                  />
+                </th>
+                <th
+                  style={{ position: 'relative', width: columnWidths.amount, minWidth: 100 }}
+                >
+                  Amount
+                  <span
+                    onMouseDown={(e) => handleColumnResizeMouseDown('amount', e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      cursor: 'col-resize',
+                    }}
+                  />
+                </th>
+                <th
+                  style={{ position: 'relative', width: columnWidths.account, minWidth: 120 }}
+                >
+                  Account
+                  <span
+                    onMouseDown={(e) => handleColumnResizeMouseDown('account', e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      cursor: 'col-resize',
+                    }}
+                  />
+                </th>
+                <th
+                  style={{
+                    position: 'relative',
+                    width: columnWidths.description,
+                    minWidth: 200,
+                  }}
+                >
+                  Description
+                  <span
+                    onMouseDown={(e) => handleColumnResizeMouseDown('description', e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      cursor: 'col-resize',
+                    }}
+                  />
+                </th>
+                <th
+                  style={{ position: 'relative', width: columnWidths.notes, minWidth: 200 }}
+                >
+                  Notes
+                  <span
+                    onMouseDown={(e) => handleColumnResizeMouseDown('notes', e)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      cursor: 'col-resize',
+                    }}
+                  />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -260,15 +376,26 @@ function TransactionList() {
                             </button>
                           )}
                         </td>
-                        <td>{formatDate(t.date)}</td>
-                        <td>
+                        <td
+                          style={{
+                            width: columnWidths.date,
+                            minWidth: 80,
+                          }}
+                        >
+                          {formatDate(t.date)}
+                        </td>
+                        <td
+                          style={{
+                            width: columnWidths.amount,
+                            minWidth: 100,
+                          }}
+                        >
                           <input
-                            type="number"
-                            step="0.01"
+                            type="text"
                             value={
                               editRows[t.id]?.amountText ??
                               (t.amount !== undefined && t.amount !== null
-                                ? String(t.amount)
+                                ? plainAmountFormatter.format(t.amount)
                                 : '')
                             }
                             onChange={(e) => handleFieldChange(t, 'amount', e.target.value)}
@@ -282,34 +409,137 @@ function TransactionList() {
                             }}
                           />
                         </td>
-                        <td>{t.account_name || t.account_id}</td>
-                        <td>
-                          <input
-                            type="text"
-                            value={editRows[t.id]?.description ?? (t.description ?? '')}
-                            onChange={(e) => handleFieldChange(t, 'description', e.target.value)}
-                            onBlur={() => handleBlurSave(t)}
-                            style={{
-                              width: '100%',
-                              border: 'none',
-                              outline: 'none',
-                              background: 'transparent',
-                            }}
-                          />
+                        <td
+                          style={{
+                            width: columnWidths.account,
+                            minWidth: 120,
+                          }}
+                        >
+                          {t.account_name || t.account_id}
                         </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={editRows[t.id]?.notes ?? (t.notes ?? t.source ?? '')}
-                            onChange={(e) => handleFieldChange(t, 'notes', e.target.value)}
-                            onBlur={() => handleBlurSave(t)}
-                            style={{
-                              width: '100%',
-                              border: 'none',
-                              outline: 'none',
-                              background: 'transparent',
-                            }}
-                          />
+                        <td
+                          style={{
+                            width: columnWidths.description,
+                            minWidth: 200,
+                            verticalAlign: 'top',
+                            cursor: editRows[t.id]?.isEditingDescription ? 'text' : 'pointer',
+                          }}
+                          onClick={() => {
+                            if (editRows[t.id]?.isEditingDescription) return;
+                            setEditRows((prev) => ({
+                              ...prev,
+                              [t.id]: {
+                                ...(prev[t.id] || {}),
+                                description:
+                                  prev[t.id]?.description ?? (t.description ?? ''),
+                                isEditingDescription: true,
+                              },
+                            }));
+                          }}
+                        >
+                          {editRows[t.id]?.isEditingDescription ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editRows[t.id]?.description ?? (t.description ?? '')}
+                              onChange={(e) =>
+                                handleFieldChange(t, 'description', e.target.value)
+                              }
+                              onBlur={() => {
+                                handleBlurSave(t);
+                                setEditRows((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    ...(prev[t.id] || {}),
+                                    isEditingDescription: false,
+                                  },
+                                }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                display: 'block',
+                                whiteSpace: 'pre-wrap',
+                                overflowWrap: 'break-word',
+                              }}
+                            >
+                              {t.description ?? ''}
+                            </span>
+                          )}
+                        </td>
+                        <td
+                          style={{
+                            width: columnWidths.notes,
+                            minWidth: 200,
+                            verticalAlign: 'top',
+                            cursor: editRows[t.id]?.isEditingNotes ? 'text' : 'pointer',
+                          }}
+                          onClick={() => {
+                            if (editRows[t.id]?.isEditingNotes) return;
+                            setEditRows((prev) => ({
+                              ...prev,
+                              [t.id]: {
+                                ...(prev[t.id] || {}),
+                                notes:
+                                  prev[t.id]?.notes ?? (t.notes ?? t.source ?? ''),
+                                isEditingNotes: true,
+                              },
+                            }));
+                          }}
+                        >
+                          {editRows[t.id]?.isEditingNotes ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editRows[t.id]?.notes ?? (t.notes ?? t.source ?? '')}
+                              onChange={(e) => handleFieldChange(t, 'notes', e.target.value)}
+                              onBlur={() => {
+                                handleBlurSave(t);
+                                setEditRows((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    ...(prev[t.id] || {}),
+                                    isEditingNotes: false,
+                                  },
+                                }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                display: 'block',
+                                whiteSpace: 'pre-wrap',
+                                overflowWrap: 'break-word',
+                              }}
+                            >
+                              {t.notes ?? t.source ?? ''}
+                            </span>
+                          )}
                         </td>
                       </tr>,
                     ];
@@ -319,15 +549,26 @@ function TransactionList() {
                         rows.push(
                           <tr key={`${t.id}-${a.id}`} className="trans-income">
                             <td></td>
-                            <td>{formatDate(a.date)}</td>
-                            <td>
+                            <td
+                              style={{
+                                width: columnWidths.date,
+                                minWidth: 80,
+                              }}
+                            >
+                              {formatDate(a.date)}
+                            </td>
+                            <td
+                              style={{
+                                width: columnWidths.amount,
+                                minWidth: 100,
+                              }}
+                            >
                               <input
-                                type="number"
-                                step="0.01"
+                                type="text"
                                 value={
                                   editRows[a.id]?.amountText ??
                                   (a.amount !== undefined && a.amount !== null
-                                    ? String(a.amount)
+                                    ? plainAmountFormatter.format(a.amount)
                                     : '')
                                 }
                                 onChange={(e) => handleFieldChange(a, 'amount', e.target.value)}
@@ -341,34 +582,144 @@ function TransactionList() {
                                 }}
                               />
                             </td>
-                            <td>{a.account_name || a.account_id}</td>
-                            <td>
-                              <input
-                                type="text"
-                                value={editRows[a.id]?.description ?? (a.description ?? '')}
-                                onChange={(e) => handleFieldChange(a, 'description', e.target.value)}
-                                onBlur={() => handleBlurSave(a)}
-                                style={{
-                                  width: '100%',
-                                  border: 'none',
-                                  outline: 'none',
-                                  background: 'transparent',
-                                }}
-                              />
+                            <td
+                              style={{
+                                width: columnWidths.account,
+                                minWidth: 120,
+                              }}
+                            >
+                              {a.account_name || a.account_id}
                             </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={editRows[a.id]?.notes ?? (a.notes ?? '')}
-                                onChange={(e) => handleFieldChange(a, 'notes', e.target.value)}
-                                onBlur={() => handleBlurSave(a)}
-                                style={{
-                                  width: '100%',
-                                  border: 'none',
-                                  outline: 'none',
-                                  background: 'transparent',
-                                }}
-                              />
+                            <td
+                              style={{
+                                width: columnWidths.description,
+                                minWidth: 200,
+                                verticalAlign: 'top',
+                                cursor: editRows[a.id]?.isEditingDescription
+                                  ? 'text'
+                                  : 'pointer',
+                              }}
+                              onClick={() => {
+                                if (editRows[a.id]?.isEditingDescription) return;
+                                setEditRows((prev) => ({
+                                  ...prev,
+                                  [a.id]: {
+                                    ...(prev[a.id] || {}),
+                                    description:
+                                      prev[a.id]?.description ?? (a.description ?? ''),
+                                    isEditingDescription: true,
+                                  },
+                                }));
+                              }}
+                            >
+                              {editRows[a.id]?.isEditingDescription ? (
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={
+                                    editRows[a.id]?.description ?? (a.description ?? '')
+                                  }
+                                  onChange={(e) =>
+                                    handleFieldChange(a, 'description', e.target.value)
+                                  }
+                                  onBlur={() => {
+                                    handleBlurSave(a);
+                                    setEditRows((prev) => ({
+                                      ...prev,
+                                      [a.id]: {
+                                        ...(prev[a.id] || {}),
+                                        isEditingDescription: false,
+                                      },
+                                    }));
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      e.currentTarget.blur();
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    border: 'none',
+                                    outline: 'none',
+                                    background: 'transparent',
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  style={{
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    overflowWrap: 'break-word',
+                                  }}
+                                >
+                                  {a.description ?? ''}
+                                </span>
+                              )}
+                            </td>
+                            <td
+                              style={{
+                                width: columnWidths.notes,
+                                minWidth: 200,
+                                verticalAlign: 'top',
+                                cursor: editRows[a.id]?.isEditingNotes
+                                  ? 'text'
+                                  : 'pointer',
+                              }}
+                              onClick={() => {
+                                if (editRows[a.id]?.isEditingNotes) return;
+                                setEditRows((prev) => ({
+                                  ...prev,
+                                  [a.id]: {
+                                    ...(prev[a.id] || {}),
+                                    notes: prev[a.id]?.notes ?? (a.notes ?? ''),
+                                    isEditingNotes: true,
+                                  },
+                                }));
+                              }}
+                            >
+                              {editRows[a.id]?.isEditingNotes ? (
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editRows[a.id]?.notes ?? (a.notes ?? '')}
+                                  onChange={(e) =>
+                                    handleFieldChange(a, 'notes', e.target.value)
+                                  }
+                                  onBlur={() => {
+                                    handleBlurSave(a);
+                                    setEditRows((prev) => ({
+                                      ...prev,
+                                      [a.id]: {
+                                        ...(prev[a.id] || {}),
+                                        isEditingNotes: false,
+                                      },
+                                    }));
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      e.currentTarget.blur();
+                                    }
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    border: 'none',
+                                    outline: 'none',
+                                    background: 'transparent',
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  style={{
+                                    display: 'block',
+                                    whiteSpace: 'pre-wrap',
+                                    overflowWrap: 'break-word',
+                                  }}
+                                >
+                                  {a.notes ?? ''}
+                                </span>
+                              )}
                             </td>
                             <td>{a.type}</td>
                           </tr>
