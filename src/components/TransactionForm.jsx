@@ -24,6 +24,8 @@ function TransactionForm() {
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [accountsLoading, setAccountsLoading] = useState(true);
+  const [incomeAllocations, setIncomeAllocations] = useState([]);
+  const [allocationEdited, setAllocationEdited] = useState(false);
   const navigate = useNavigate();
   const hiddenDateInputRef = useRef(null);
 
@@ -55,6 +57,8 @@ function TransactionForm() {
 
     if (raw === '') {
       setAmount('');
+      setIncomeAllocations([]);
+      setAllocationEdited(false);
       return;
     }
 
@@ -69,6 +73,42 @@ function TransactionForm() {
     setAmount(formatted);
   };
 
+  // Keep allocation breakdown (percentages -> amounts) in sync with amount/accounts
+  useEffect(() => {
+    const numericAmountForAlloc = amount ? parseFloat(String(amount).replace(/,/g, '')) : NaN;
+
+    if (type !== 'income') {
+      setIncomeAllocations([]);
+      setAllocationEdited(false);
+      return;
+    }
+
+    if (!amount || Number.isNaN(numericAmountForAlloc) || accounts.length === 0) {
+      return;
+    }
+
+    setIncomeAllocations((prev) => {
+      let base;
+
+      if (prev.length === 0 || !allocationEdited) {
+        // Use default account percentages when no custom edits yet
+        base = accounts.map((acc) => ({
+          account_id: acc.id,
+          account_name: acc.name,
+          percentage: acc.percentage,
+        }));
+      } else {
+        // Preserve user-edited percentages but recalc amounts for new total
+        base = prev;
+      }
+
+      return base.map((row) => ({
+        ...row,
+        amount: (numericAmountForAlloc * (Number(row.percentage) || 0)) / 100,
+      }));
+    });
+  }, [type, accounts, amount, allocationEdited]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError(null);
@@ -80,6 +120,25 @@ function TransactionForm() {
       setLoading(false);
       return;
     }
+
+    // For income, if the user has edited the allocation, validate the custom breakdown
+    let allocationsOverride;
+    if (type === 'income' && allocationEdited && incomeAllocations.length > 0) {
+      const totalPercentage = incomeAllocations.reduce(
+        (sum, a) => sum + (Number(a.percentage) || 0),
+        0
+      );
+      const diff = Math.abs(totalPercentage - 100);
+      if (diff > 0.01) {
+        setError('Total allocation percentages must equal 100%.');
+        setLoading(false);
+        return;
+      }
+      allocationsOverride = incomeAllocations.map((a) => ({
+        account_id: a.account_id,
+        amount: Number(a.amount) || 0,
+      }));
+    }
     const payload = {
       amount: numericAmount,
       description,
@@ -87,7 +146,7 @@ function TransactionForm() {
       date,
     };
     const action = type === 'income'
-      ? createIncomeWithAllocations({ amount: payload.amount, description: payload.description, notes, date: payload.date })
+      ? createIncomeWithAllocations({ amount: payload.amount, description: payload.description, notes, date: payload.date, allocations: allocationsOverride })
       : createExpense({ amount: payload.amount, description: payload.description, account_id: accountId, notes, date: payload.date });
 
     action
@@ -99,6 +158,8 @@ function TransactionForm() {
         setNotes('');
         setAccountId('');
         setDate(new Date().toISOString().slice(0, 10));
+        setIncomeAllocations([]);
+        setAllocationEdited(false);
         navigate('/transactions')
       })
       .catch(() => {
@@ -107,15 +168,14 @@ function TransactionForm() {
       });
   };
 
-  // Calculate allocation breakdown
-  let allocation = [];
-  const numericAmountForAlloc = amount ? parseFloat(String(amount).replace(/,/g, '')) : NaN;
-  if (type === 'income' && accounts.length > 0 && amount && !Number.isNaN(numericAmountForAlloc)) {
-    allocation = accounts.map((acc) => ({
-      ...acc,
-      allocated: (numericAmountForAlloc * acc.percentage) / 100,
-    }));
-  }
+  const totalAllocated = incomeAllocations.reduce(
+    (sum, a) => sum + (Number(a.amount) || 0),
+    0
+  );
+  const totalPercentage = incomeAllocations.reduce(
+    (sum, a) => sum + (Number(a.percentage) || 0),
+    0
+  );
   
 
   if (result) {
@@ -250,7 +310,7 @@ function TransactionForm() {
           {loading ? (type === 'income' ? 'Allocating...' : 'Saving...') : (type === 'income' ? 'Allocate Income' : 'Save Expense')}
         </button>
         <br /><br />
-        {allocation.length > 0 && (
+        {type === 'income' && incomeAllocations.length > 0 && (
           <div style={{ margin: '1rem 0' }}>
             <h4>Allocation Breakdown</h4>
             <table>
@@ -262,15 +322,52 @@ function TransactionForm() {
                 </tr>
               </thead>
               <tbody>
-                {allocation.map((a) => (
-                  <tr key={a.id}>
-                    <td>{a.name}</td>
-                    <td>{a.percentage}%</td>
-                    <td>{a.allocated.toFixed(2)}</td>
+                {incomeAllocations.map((a) => (
+                  <tr key={a.account_id}>
+                    <td>{a.account_name}</td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={a.percentage ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const numeric = value === '' ? '' : Number(value);
+                          setIncomeAllocations((prev) => {
+                            const next = prev.map((row) =>
+                              row.account_id === a.account_id
+                                ? { ...row, percentage: numeric }
+                                : row
+                            );
+                            const numericAmountForAlloc = amount
+                              ? parseFloat(String(amount).replace(/,/g, ''))
+                              : NaN;
+                            if (!Number.isNaN(numericAmountForAlloc)) {
+                              return next.map((row) => ({
+                                ...row,
+                                amount:
+                                  (numericAmountForAlloc * (Number(row.percentage) || 0)) /
+                                  100,
+                              }));
+                            }
+                            return next;
+                          });
+                          setAllocationEdited(true);
+                        }}
+                        style={{ width: '25%', border: 'none', borderBottom: '1px solid #ccc', borderRadius: 0 }}
+                        disabled={loading || accountsLoading}
+                      />
+                      <span>{` `}%</span>
+                    </td>
+                    <td>{(Number(a.amount) || 0).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <p style={{ marginTop: '0.5rem' }}>
+              Total percentage: {totalPercentage.toFixed(2)}% &nbsp; | &nbsp;
+              Total allocated: {totalAllocated.toFixed(2)}
+            </p>
           </div>
         )}
       </form>

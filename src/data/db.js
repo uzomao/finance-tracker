@@ -79,7 +79,7 @@ export async function getTransactions() {
     });
 }
 
-export async function createIncomeWithAllocations({ amount, description = '', notes, date }) {
+export async function createIncomeWithAllocations({ amount, description = '', notes, date, allocations }) {
   const db = await getDb();
   const now = new Date().toISOString();
   const when = date || now;
@@ -97,20 +97,37 @@ export async function createIncomeWithAllocations({ amount, description = '', no
   });
 
   const accounts = await accountsStore.getAll();
-  const allocations = accounts.map((account) => {
-    const allocated = (amount * account.percentage) / 100;
-    return {
-      amount: allocated,
-      account_id: account.id,
+
+  let allocationsToSave;
+
+  if (Array.isArray(allocations) && allocations.length > 0) {
+    // Use custom per-transaction allocation breakdown supplied by the caller
+    allocationsToSave = allocations.map((alloc) => ({
+      amount: alloc.amount,
+      account_id: alloc.account_id,
       description: 'Income allocation',
       type: 'income',
       date: when,
       notes: '',
       parent_income_id: totalIncomeId,
-    };
-  });
+    }));
+  } else {
+    // Fall back to default account percentage-based allocations
+    allocationsToSave = accounts.map((account) => {
+      const allocated = (amount * account.percentage) / 100;
+      return {
+        amount: allocated,
+        account_id: account.id,
+        description: 'Income allocation',
+        type: 'income',
+        date: when,
+        notes: '',
+        parent_income_id: totalIncomeId,
+      };
+    });
+  }
 
-  for (const alloc of allocations) {
+  for (const alloc of allocationsToSave) {
     await txStore.add(alloc);
   }
 
@@ -118,7 +135,7 @@ export async function createIncomeWithAllocations({ amount, description = '', no
 
   return {
     totalIncomeId,
-    allocations,
+    allocations: allocationsToSave,
   };
 }
 
