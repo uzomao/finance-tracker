@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getAccount, createAccount, updateAccount } from '../data/db';
 
 function AccountForm() {
   const [name, setName] = useState('');
@@ -14,22 +15,30 @@ function AccountForm() {
   useEffect(() => {
     if (isEdit) {
       setLoading(true);
-      fetch(`http://localhost:3001/accounts/${id}`)
-        .then((res) => {
-          if (!res.ok) throw new Error('Not found');
-          return res.json();
-        })
-        .then((data) => {
-          console.log(data)
-          setName(data.name);
-          setPercentage(data.percentage);
-          setKeywords(data.keywords);
-          setLoading(false);
-        })
-        .catch(() => {
-          setError('Failed to load account');
-          setLoading(false);
-        });
+      let cancelled = false;
+      (async () => {
+        try {
+          const data = await getAccount(id);
+          if (!data) {
+            throw new Error('Not found');
+          }
+          if (!cancelled) {
+            setName(data.name);
+            setPercentage(data.percentage);
+            setKeywords(data.keywords);
+            setLoading(false);
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError('Failed to load account');
+            setLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
     }
   }, [id, isEdit]);
 
@@ -42,17 +51,12 @@ function AccountForm() {
     }
     setLoading(true);
     const payload = { name, percentage: parseFloat(percentage), keywords };
-    const url = isEdit
-      ? `http://localhost:3001/accounts/${id}`
-      : 'http://localhost:3001/accounts';
-    const method = isEdit ? 'PUT' : 'POST';
-    fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Save failed');
+    const action = isEdit
+      ? updateAccount(id, payload)
+      : createAccount(payload);
+
+    action
+      .then(() => {
         navigate('/accounts');
       })
       .catch(() => {

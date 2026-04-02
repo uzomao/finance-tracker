@@ -1,30 +1,69 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getAccounts, getTransactions, deleteAccount as deleteAccountLocal } from '../data/db';
 
 function AccountList() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [accountStats, setAccountStats] = useState({});
   const navigate = useNavigate();
 
+  const naira = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  });
+
   useEffect(() => {
-    fetch('http://localhost:3001/accounts')
-      .then((res) => res.json())
-      .then((data) => {
-        setAccounts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError('Failed to fetch accounts');
-        setLoading(false);
-      });
+    let cancelled = false;
+    (async () => {
+      try {
+        const [accountsData, transactions] = await Promise.all([
+          getAccounts(),
+          getTransactions(),
+        ]);
+        if (!cancelled) {
+          setAccounts(accountsData);
+
+          const stats = {};
+          accountsData.forEach((acc) => {
+            stats[acc.id] = { income: 0, expense: 0, balance: 0 };
+          });
+
+          transactions.forEach((tx) => {
+            if (!tx.account_id || !stats[tx.account_id]) return;
+            if (tx.type === 'income') {
+              stats[tx.account_id].income += tx.amount;
+            } else if (tx.type === 'expense') {
+              stats[tx.account_id].expense += tx.amount;
+            }
+          });
+
+          Object.values(stats).forEach((s) => {
+            s.balance = s.income - s.expense;
+          });
+
+          setAccountStats(stats);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError('Failed to fetch accounts');
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleDelete = (id) => {
     if (!window.confirm('Delete this account?')) return;
-    fetch(`http://localhost:3001/accounts/${id}`, { method: 'DELETE' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Delete failed');
+    deleteAccountLocal(id)
+      .then(() => {
         setAccounts((prev) => prev.filter((a) => a.id !== id));
       })
       .catch(() => setError('Failed to delete account'));
@@ -44,6 +83,9 @@ function AccountList() {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Total Income</th>
+              <th>Total Expense</th>
+              <th>Balance</th>
               <th>Percentage</th>
               <th>Keywords</th>
               <th>Actions</th>
@@ -53,6 +95,15 @@ function AccountList() {
             {accounts.map((account) => (
               <tr key={account.id}>
                 <td>{account.name}</td>
+                <td className="trans-income">{naira.format((accountStats[account.id]?.income ?? 0))}</td>
+                <td className="trans-expense">{naira.format((accountStats[account.id]?.expense ?? 0))}</td>
+                <td className={
+                  (accountStats[account.id]?.balance ?? 0) < 0
+                    ? 'trans-expense'
+                    : 'trans-income'
+                }>
+                  {naira.format((accountStats[account.id]?.balance ?? 0))}
+                </td>
                 <td>{account.percentage}%</td>
                 <td>{account.keywords}</td>
                 <td>

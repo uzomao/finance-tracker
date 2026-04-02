@@ -24,6 +24,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 const initDb = () => {
   db.serialize(() => {
     db.run(`DROP TABLE IF EXISTS categories`); // Remove old table if present
+    db.run(`DROP TABLE IF EXISTS transactions`);
     db.run(`CREATE TABLE IF NOT EXISTS accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -37,7 +38,7 @@ const initDb = () => {
       account_id INTEGER,
       description TEXT,
       date TEXT DEFAULT (datetime('now')),
-      source TEXT,
+      notes TEXT,
       type TEXT CHECK(type IN ('income', 'expense')),
       FOREIGN KEY (account_id) REFERENCES accounts(id)
     )`);
@@ -133,7 +134,7 @@ app.get('/accounts/:id', (req, res) => {
 
 // POST /transactions: handles both income and expense
 app.post('/transactions', (req, res) => {
-  const { amount, description, type, account_id } = req.body;
+  const { amount, description, type, account_id, notes } = req.body;
   if (!amount || isNaN(amount) || !type) {
     return res.status(400).json({ error: 'Amount and type are required.' });
   }
@@ -141,8 +142,8 @@ app.post('/transactions', (req, res) => {
   if (type === 'income') {
     // 1. Create a transaction for the total income (no account_id)
     db.run(
-      'INSERT INTO transactions (amount, description, type) VALUES (?, ?, ?)',
-      [amount, description || '', 'income'],
+      'INSERT INTO transactions (amount, description, type, notes) VALUES (?, ?, ?, ?)',
+      [amount, description || '', 'income', notes || ''],
       function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
@@ -160,14 +161,15 @@ app.post('/transactions', (req, res) => {
               account_id: account.id,
               description: 'Income allocation',
               type: 'income',
+              notes: 'Income allocation',
             };
           });
           // Insert allocation transactions
           const stmt = db.prepare(
-            'INSERT INTO transactions (amount, account_id, description, type) VALUES (?, ?, ?, ?)'
+            'INSERT INTO transactions (amount, account_id, description, type, notes) VALUES (?, ?, ?, ?, ?)'
           );
           allocations.forEach((t) => {
-            stmt.run([t.amount, t.account_id, t.description, t.type]);
+            stmt.run([t.amount, t.account_id, t.description, t.type, t.notes]);
           });
           stmt.finalize((err) => {
             if (err) {
@@ -184,8 +186,8 @@ app.post('/transactions', (req, res) => {
       return res.status(400).json({ error: 'account_id is required for expenses.' });
     }
     db.run(
-      'INSERT INTO transactions (amount, account_id, description, type) VALUES (?, ?, ?, ?)',
-      [amount, account_id, description || '', 'expense'],
+      'INSERT INTO transactions (amount, account_id, description, type, notes) VALUES (?, ?, ?, ?, ?)',
+      [amount, account_id, description || '', 'expense', notes || ''],
       function (err) {
         if (err) {
           return res.status(500).json({ error: err.message });
