@@ -139,14 +139,56 @@ function TransactionList() {
     }
 
     try {
+      // If this is a parent income and the amount changed, recompute its allocation children
+      const isParentIncome =
+        tx.type === 'income' && (tx.account_id === null || tx.account_id === undefined);
+
+      let childAmountUpdates = [];
+
+      if (isParentIncome && typeof updates.amount === 'number') {
+        const oldAmount = tx.amount;
+        const newAmount = updates.amount;
+
+        if (oldAmount && oldAmount !== 0) {
+          const children = transactions.filter(
+            (child) =>
+              child.parent_income_id === tx.id &&
+              child.type === 'income' &&
+              child.account_id != null
+          );
+
+          childAmountUpdates = children.map((child) => {
+            const ratio = child.amount / oldAmount;
+            const newChildAmount = Number((newAmount * ratio).toFixed(2));
+            return { id: child.id, amount: newChildAmount };
+          });
+        }
+      }
+
       const updated = await updateTransaction(tx.id, updates);
       if (!updated) {
         setError('Failed to update transaction');
         return;
       }
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === tx.id ? { ...t, ...updates } : t))
-      );
+
+      for (const childUpdate of childAmountUpdates) {
+        await updateTransaction(childUpdate.id, { amount: childUpdate.amount });
+      }
+
+      setTransactions((prev) => {
+        const childMap = new Map(
+          childAmountUpdates.map((c) => [c.id, c.amount])
+        );
+        return prev.map((t) => {
+          if (t.id === tx.id) {
+            return { ...t, ...updates };
+          }
+          if (childMap.has(t.id)) {
+            return { ...t, amount: childMap.get(t.id) };
+          }
+          return t;
+        });
+      });
       setEditRows((prev) => ({
         ...prev,
         [tx.id]: { ...prev[tx.id], dirty: false },
