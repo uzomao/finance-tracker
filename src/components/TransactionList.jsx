@@ -282,6 +282,7 @@ function TransactionList() {
                               border: 'none',
                               outline: 'none',
                               background: 'transparent',
+                              minWidth: '100px',
                               textAlign: 'right',
                             }}
                           />
@@ -432,6 +433,7 @@ function TransactionList() {
                                   border: 'none',
                                   outline: 'none',
                                   background: 'transparent',
+                                  minWidth: '100px',
                                   textAlign: 'right',
                                 }}
                               />
