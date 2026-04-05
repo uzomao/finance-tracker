@@ -285,6 +285,7 @@ function TransactionList() {
                               minWidth: '100px',
                               textAlign: 'right',
                             }}
+                            className={t.type === 'income' ? 'trans-income' : 'trans-expense'}
                           />
                         </td>
                         <td>{t.account_name || t.account_id}</td>
@@ -436,6 +437,7 @@ function TransactionList() {
                                   minWidth: '100px',
                                   textAlign: 'right',
                                 }}
+                                className={a.type === 'income' ? 'trans-income' : 'trans-expense'}
                               />
                             </td>
                             <td>{a.account_name || a.account_id}</td>
