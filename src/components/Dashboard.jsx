@@ -92,6 +92,11 @@ function AccountsList({ accounts }) {
 }
 
 function TransactionsTable({ transactions }) {
+  // Only show parent transactions (exclude income allocation rows that have an account_id)
+  const baseTransactions = transactions.filter(
+    (tx) => !(tx.type === 'income' && tx.account_id != null)
+  );
+
   return (
     <Card>
       <CardHeader title="Transactions" to="/transactions" />
@@ -106,7 +111,7 @@ function TransactionsTable({ transactions }) {
             </tr>
           </thead>
           <tbody>
-            {transactions.length === 0 && (
+            {baseTransactions.length === 0 && (
               <tr>
                 <td
                   colSpan={4}
@@ -116,7 +121,7 @@ function TransactionsTable({ transactions }) {
                 </td>
               </tr>
             )}
-            {transactions.map((tx) => {
+            {baseTransactions.map((tx) => {
               const isIncome = tx.type === 'income';
               const amountClass = isIncome ? 'text-emerald-600' : 'text-rose-600';
               const date = tx.date ? new Date(tx.date) : null;

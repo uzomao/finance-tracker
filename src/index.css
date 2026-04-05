@@ -7,3 +7,14 @@
 body {
   @apply bg-gray-50 text-slate-900 antialiased;
 }
+
+@layer utilities {
+  .trans-income {
+    color: #059669; /* Tailwind emerald-600 */
+  }
+
+  .trans-expense,
+  .trains-expense {
+    color: #dc2626; /* Tailwind rose-600 equivalent */
+  }
+}

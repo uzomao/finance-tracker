@@ -84,7 +84,7 @@ function AccountForm() {
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700">Percentage</label>
+            <label className="block text-sm font-medium text-slate-700">Allocation Percentage</label>
             <input
               type="number"
               value={percentage}
