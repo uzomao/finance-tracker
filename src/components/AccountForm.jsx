@@ -66,48 +66,72 @@ function AccountForm() {
   };
 
   return (
-    <div>
-      <h2>{isEdit ? 'Edit' : 'Add'} Account</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Name:</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            disabled={loading}
-            type="text"
-          />
-        </div>
-        <div>
-          <label>Percentage:</label>
-          <input
-            type="number"
-            value={percentage}
-            onChange={(e) => setPercentage(e.target.value)}
-            min="0"
-            max="100"
-            step="0.01"
-            required
-            disabled={loading}
-          />
-        </div>
-        <div>
-          <label>Keywords (comma separated):</label>
-          <input
-            value={keywords}
-            onChange={(e) => setKeywords(e.target.value)}
-            disabled={loading}
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : isEdit ? 'Update' : 'Add'}
-        </button>
-        <button type="button" onClick={() => navigate('/accounts')} disabled={loading} style={{ marginLeft: 8 }}>
-          Cancel
-        </button>
-      </form>
+    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4">
+      <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
+          {isEdit ? 'Edit Account' : 'Add Account'}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={loading}
+              type="text"
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Percentage</label>
+            <input
+              type="number"
+              value={percentage}
+              onChange={(e) => setPercentage(e.target.value)}
+              min="0"
+              max="100"
+              step="0.01"
+              required
+              disabled={loading}
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">
+              Keywords (comma separated)
+            </label>
+            <input
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              disabled={loading}
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-rose-600">
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate('/accounts')}
+              disabled={loading}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              {loading ? 'Saving...' : isEdit ? 'Update' : 'Add'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
