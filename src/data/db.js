@@ -1,28 +1,20 @@
 // Unified data access layer for the app.
 //
-// Components should always import from this module. All reads and writes go
-// to IndexedDB first for speed and offline support. A separate background
-// sync service is responsible for pushing pending changes to Firebase when
-// enabled.
+// Components should always import from this module. Firestore is the single
+// source of truth for all reads and writes; real-time listeners elsewhere in
+// the app keep UI state up to date.
 
-import * as localDb from './db.local';
+import * as firebaseDb from './db.firebase';
 
-// Account APIs (IndexedDB-first)
-export const getAccounts = localDb.getAccounts;
-export const getAccount = localDb.getAccount;
-export const createAccount = localDb.createAccount;
-export const updateAccount = localDb.updateAccount;
-export const deleteAccount = localDb.deleteAccount;
+// Account APIs (Firestore)
+export const getAccounts = firebaseDb.getAccounts;
+export const getAccount = firebaseDb.getAccount;
+export const createAccount = firebaseDb.createAccount;
+export const updateAccount = firebaseDb.updateAccount;
+export const deleteAccount = firebaseDb.deleteAccount;
 
-// Transaction APIs (IndexedDB-first)
-export const getTransactions = localDb.getTransactions;
-export const createIncomeWithAllocations = localDb.createIncomeWithAllocations;
-export const createExpense = localDb.createExpense;
-export const updateTransaction = localDb.updateTransaction;
-
-// Sync helper APIs, used by the background sync service. These are safe to
-// re-export as they don't change any existing component behaviour.
-export const getPendingAccounts = localDb.getPendingAccounts;
-export const getPendingTransactions = localDb.getPendingTransactions;
-export const markAccountSynced = localDb.markAccountSynced;
-export const markTransactionSynced = localDb.markTransactionSynced;
+// Transaction APIs (Firestore)
+export const getTransactions = firebaseDb.getTransactions;
+export const createIncomeWithAllocations = firebaseDb.createIncomeWithAllocations;
+export const createExpense = firebaseDb.createExpense;
+export const updateTransaction = firebaseDb.updateTransaction;

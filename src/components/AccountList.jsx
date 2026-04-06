@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getAccounts, getTransactions, deleteAccount as deleteAccountLocal } from '../data/db';
+import { deleteAccount as deleteAccountLocal } from '../data/db';
+import { subscribeToTransactions } from '../data/transactionsRealtime';
+import { subscribeToAccounts } from '../data/accountsRealtime';
 
 function AccountList() {
   const [accounts, setAccounts] = useState([]);
@@ -17,36 +19,58 @@ function AccountList() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe = null;
+
     (async () => {
       try {
-        const [accountsData, transactions] = await Promise.all([
-          getAccounts(),
-          getTransactions(),
-        ]);
-        if (!cancelled) {
-          setAccounts(accountsData);
+        const unsubscribeAccounts = await subscribeToAccounts(
+          (accountsData) => {
+            if (cancelled) return;
+            setAccounts(accountsData);
+          },
+          () => {
+            if (cancelled) return;
+            setError('Failed to fetch accounts');
+            setLoading(false);
+          },
+        );
 
-          const stats = {};
-          accountsData.forEach((acc) => {
-            stats[acc.id] = { income: 0, expense: 0, balance: 0 };
-          });
+        const unsubscribeTx = await subscribeToTransactions(
+          (transactions) => {
+            if (cancelled) return;
 
-          transactions.forEach((tx) => {
-            if (!tx.account_id || !stats[tx.account_id]) return;
-            if (tx.type === 'income') {
-              stats[tx.account_id].income += tx.amount;
-            } else if (tx.type === 'expense') {
-              stats[tx.account_id].expense += tx.amount;
-            }
-          });
+            const stats = {};
+            accounts.forEach((acc) => {
+              stats[acc.id] = { income: 0, expense: 0, balance: 0 };
+            });
 
-          Object.values(stats).forEach((s) => {
-            s.balance = s.income - s.expense;
-          });
+            transactions.forEach((tx) => {
+              if (!tx.account_id || !stats[tx.account_id]) return;
+              if (tx.type === 'income') {
+                stats[tx.account_id].income += tx.amount;
+              } else if (tx.type === 'expense') {
+                stats[tx.account_id].expense += tx.amount;
+              }
+            });
 
-          setAccountStats(stats);
-          setLoading(false);
-        }
+            Object.values(stats).forEach((s) => {
+              s.balance = s.income - s.expense;
+            });
+
+            setAccountStats(stats);
+            setLoading(false);
+          },
+          () => {
+            if (cancelled) return;
+            setError('Failed to fetch accounts');
+            setLoading(false);
+          },
+        );
+
+        unsubscribe = () => {
+          unsubscribeAccounts();
+          unsubscribeTx();
+        };
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch accounts');
@@ -57,6 +81,9 @@ function AccountList() {
 
     return () => {
       cancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 

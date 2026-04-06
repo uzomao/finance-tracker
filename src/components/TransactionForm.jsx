@@ -145,9 +145,22 @@ function TransactionForm() {
       type,
       date,
     };
+
     const action = type === 'income'
-      ? createIncomeWithAllocations({ amount: payload.amount, description: payload.description, notes, date: payload.date, allocations: allocationsOverride })
-      : createExpense({ amount: payload.amount, description: payload.description, account_id: accountId, notes, date: payload.date });
+      ? createIncomeWithAllocations({
+          amount: payload.amount,
+          description: payload.description,
+          notes,
+          date: payload.date,
+          allocations: allocationsOverride,
+        })
+      : createExpense({
+          amount: payload.amount,
+          description: payload.description,
+          account_id: accountId,
+          notes,
+          date: payload.date,
+        });
 
     action
       .then((data) => {

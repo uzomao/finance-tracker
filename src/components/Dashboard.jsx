@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAccounts, getTransactions } from '../data/db';
+import { getAccounts } from '../data/db';
+import { subscribeToTransactions } from '../data/transactionsRealtime';
 
 function Card({ children, className = '' }) {
   return (
@@ -166,47 +167,60 @@ function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe = null;
+
     (async () => {
       try {
-        const [accountsData, transactionsData] = await Promise.all([
-          getAccounts(),
-          getTransactions(),
-        ]);
+        const accountsData = await getAccounts();
         if (cancelled) return;
 
-        // Compute account balances from transactions
-        const stats = {};
-        accountsData.forEach((acc) => {
-          stats[acc.id] = { income: 0, expense: 0 };
-        });
+        unsubscribe = await subscribeToTransactions(
+          (transactionsData) => {
+            if (cancelled) return;
 
-        transactionsData.forEach((tx) => {
-          if (!tx.account_id || !stats[tx.account_id]) return;
-          if (tx.type === 'income') {
-            stats[tx.account_id].income += tx.amount;
-          } else if (tx.type === 'expense') {
-            stats[tx.account_id].expense += tx.amount;
-          }
-        });
+            const stats = {};
+            accountsData.forEach((acc) => {
+              stats[acc.id] = { income: 0, expense: 0 };
+            });
 
-        const accountsWithBalance = accountsData.map((acc) => {
-          const s = stats[acc.id] || { income: 0, expense: 0 };
-          return {
-            ...acc,
-            balance: s.income - s.expense,
-          };
-        });
+            transactionsData.forEach((tx) => {
+              if (!tx.account_id || !stats[tx.account_id]) return;
+              if (tx.type === 'income') {
+                stats[tx.account_id].income += tx.amount;
+              } else if (tx.type === 'expense') {
+                stats[tx.account_id].expense += tx.amount;
+              }
+            });
 
-        setAccounts(accountsWithBalance);
-        setTransactions(transactionsData.slice(0, 8));
-        setLoading(false);
+            const accountsWithBalance = accountsData.map((acc) => {
+              const s = stats[acc.id] || { income: 0, expense: 0 };
+              return {
+                ...acc,
+                balance: s.income - s.expense,
+              };
+            });
+
+            setAccounts(accountsWithBalance);
+            setTransactions(transactionsData.slice(0, 8));
+            setLoading(false);
+          },
+          () => {
+            if (cancelled) return;
+            setLoading(false);
+          },
+        );
       } catch (e) {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 

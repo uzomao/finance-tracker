@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import AccountList from './components/AccountList';
@@ -6,7 +5,6 @@ import AccountForm from './components/AccountForm';
 import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import FileUpload from './components/FileUpload';
-import { startBackgroundSync } from './data/syncService';
 
 function AppLayout() {
   return (
@@ -103,14 +101,6 @@ function AppLayout() {
 }
 
 function App() {
-  // Wire background sync into the app lifecycle. This keeps all components
-  // simple – they only talk to the local db module, while this effect
-  // periodically pushes pending changes to Firebase when enabled.
-  useEffect(() => {
-    const stop = startBackgroundSync({ intervalMs: 60000 });
-    return () => stop();
-  }, []);
-
   return (
     <Router>
       <AppLayout />

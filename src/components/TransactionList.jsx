@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getTransactions, updateTransaction } from '../data/db';
+import { updateTransaction } from '../data/db';
+import { subscribeToTransactions } from '../data/transactionsRealtime';
 import { formatDate } from './TransactionForm';
 
 function TransactionList() {
@@ -13,13 +14,22 @@ function TransactionList() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe = null;
+
     (async () => {
       try {
-        const data = await getTransactions();
-        if (!cancelled) {
-          setTransactions(data);
-          setLoading(false);
-        }
+        unsubscribe = await subscribeToTransactions(
+          (data) => {
+            if (cancelled) return;
+            setTransactions(data);
+            setLoading(false);
+          },
+          () => {
+            if (cancelled) return;
+            setError('Failed to fetch transactions');
+            setLoading(false);
+          },
+        );
       } catch (err) {
         if (!cancelled) {
           setError('Failed to fetch transactions');
@@ -30,6 +40,9 @@ function TransactionList() {
 
     return () => {
       cancelled = true;
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
   }, []);
 
