@@ -1,28 +1,43 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { USE_FIREBASE, firebaseConfig } from '../config';
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyA2mVJVssfc286VdvFt3HjrEo2lsBeN3lw",
-  authDomain: "finance-tracker-9628f.firebaseapp.com",
-  projectId: "finance-tracker-9628f",
-  storageBucket: "finance-tracker-9628f.firebasestorage.app",
-  messagingSenderId: "314146909646",
-  appId: "1:314146909646:web:a794161bda64bfac674f9f"
-};
+// Centralised Firebase client initialisation.
+//
+// When USE_FIREBASE is false or firebaseConfig is missing/invalid, we do not
+// initialise Firebase and any caller should treat Firebase as disabled.
 
-// Only initialize if config has been filled out (basic guard for development)
-const app = initializeApp(firebaseConfig);
+let app = null;
+let auth = null;
+let db = null;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const hasFirebaseConfig =
+  !!firebaseConfig &&
+  !!firebaseConfig.apiKey &&
+  !!firebaseConfig.projectId &&
+  !!firebaseConfig.appId;
+
+if (USE_FIREBASE && hasFirebaseConfig) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} else if (USE_FIREBASE) {
+  // Feature flag is on but config is incomplete – log once for developers.
+  // The rest of the app will continue to work against IndexedDB only.
+  // eslint-disable-next-line no-console
+  console.warn('[firebase] USE_FIREBASE is true but Firebase config is incomplete; remote sync is disabled.');
+}
+
+export { auth, db };
 
 let userIdPromise;
 
 export function getCurrentUserId() {
+  if (!USE_FIREBASE || !auth) {
+    return Promise.reject(new Error('Firebase is disabled or not configured.'));
+  }
+
   if (auth.currentUser) {
     return Promise.resolve(auth.currentUser.uid);
   }
