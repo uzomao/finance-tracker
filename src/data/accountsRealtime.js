@@ -1,28 +1,27 @@
-import { db, getCurrentUserId } from './firebaseClient';
+import { db } from './firebaseClient';
+import { getActiveProfileId } from './profileService';
 import { collection, onSnapshot } from 'firebase/firestore';
 
-// Subscribe to accounts in Firestore in real time. Falls back to a single
-// IndexedDB fetch when Firebase is disabled or misconfigured.
+// Subscribe to accounts in Firestore in real time, scoped to the
+// current profile. Returns an unsubscribe function.
 //
-// Returns an unsubscribe function.
 export async function subscribeToAccounts(onData, onError) {
   if (!db) {
     if (onError) onError(new Error('Firestore is not configured.'));
     return () => {};
   }
 
-  const userId = await getCurrentUserId().catch((err) => {
+  const profileId = await getActiveProfileId().catch((err) => {
     if (onError) onError(err);
     return null;
   });
 
-  if (!userId) {
-    const data = await getLocalAccounts();
-    onData(data);
+  if (!profileId) {
+    if (onError) onError(new Error('No active profile.'));
     return () => {};
   }
 
-  const accCol = collection(db, 'users', userId, 'accounts');
+  const accCol = collection(db, 'profiles', profileId, 'accounts');
 
   const unsubscribe = onSnapshot(
     accCol,

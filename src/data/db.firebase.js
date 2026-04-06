@@ -8,7 +8,8 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { db, getCurrentUserId } from './firebaseClient';
+import { db } from './firebaseClient';
+import { getActiveProfileId } from './profileService';
 
 // Helper to normalise Firestore timestamps to ISO strings
 function normaliseDate(value) {
@@ -22,8 +23,8 @@ function normaliseDate(value) {
 // ----- Account APIs (Firestore) -----
 
 export async function getAccounts() {
-  const userId = await getCurrentUserId();
-  const colRef = collection(db, 'users', userId, 'accounts');
+  const profileId = await getActiveProfileId();
+  const colRef = collection(db, 'profiles', profileId, 'accounts');
   const snap = await getDocs(colRef);
   const accounts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
@@ -39,16 +40,16 @@ export async function getAccounts() {
 }
 
 export async function getAccount(id) {
-  const userId = await getCurrentUserId();
-  const ref = doc(db, 'users', userId, 'accounts', String(id));
+  const profileId = await getActiveProfileId();
+  const ref = doc(db, 'profiles', profileId, 'accounts', String(id));
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
 }
 
 export async function createAccount({ name, percentage, keywords = '' }) {
-  const userId = await getCurrentUserId();
-  const colRef = collection(db, 'users', userId, 'accounts');
+  const profileId = await getActiveProfileId();
+  const colRef = collection(db, 'profiles', profileId, 'accounts');
   const data = {
     name,
     percentage,
@@ -63,8 +64,8 @@ export async function createAccount({ name, percentage, keywords = '' }) {
 }
 
 export async function updateAccount(id, { name, percentage, keywords = '' }) {
-  const userId = await getCurrentUserId();
-  const ref = doc(db, 'users', userId, 'accounts', String(id));
+  const profileId = await getActiveProfileId();
+  const ref = doc(db, 'profiles', profileId, 'accounts', String(id));
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
 
@@ -80,17 +81,17 @@ export async function updateAccount(id, { name, percentage, keywords = '' }) {
 }
 
 export async function deleteAccount(id) {
-  const userId = await getCurrentUserId();
-  const ref = doc(db, 'users', userId, 'accounts', String(id));
+  const profileId = await getActiveProfileId();
+  const ref = doc(db, 'profiles', profileId, 'accounts', String(id));
   await deleteDoc(ref);
 }
 
 // ----- Transaction APIs (Firestore) -----
 
 export async function getTransactions() {
-  const userId = await getCurrentUserId();
-  const txCol = collection(db, 'users', userId, 'transactions');
-  const accCol = collection(db, 'users', userId, 'accounts');
+  const profileId = await getActiveProfileId();
+  const txCol = collection(db, 'profiles', profileId, 'transactions');
+  const accCol = collection(db, 'profiles', profileId, 'accounts');
 
   const [txSnap, accSnap] = await Promise.all([
     getDocs(txCol),
@@ -132,8 +133,8 @@ export async function createIncomeWithAllocations({
   date,
   allocations,
 }) {
-  const userId = await getCurrentUserId();
-  const txCol = collection(db, 'users', userId, 'transactions');
+  const profileId = await getActiveProfileId();
+  const txCol = collection(db, 'profiles', profileId, 'transactions');
 
   const now = new Date().toISOString();
   const whenIso = date || now;
@@ -166,7 +167,7 @@ export async function createIncomeWithAllocations({
     }));
   } else {
     // If no explicit allocations were provided, fall back to account percentages
-    const accCol = collection(db, 'users', userId, 'accounts');
+    const accCol = collection(db, 'profiles', profileId, 'accounts');
     const accSnap = await getDocs(accCol);
     const accounts = accSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
@@ -195,8 +196,8 @@ export async function createIncomeWithAllocations({
 }
 
 export async function createExpense({ amount, description = '', account_id, notes = '', date }) {
-  const userId = await getCurrentUserId();
-  const txCol = collection(db, 'users', userId, 'transactions');
+  const profileId = await getActiveProfileId();
+  const txCol = collection(db, 'profiles', profileId, 'transactions');
 
   const now = new Date().toISOString();
   const whenIso = date || now;
@@ -227,8 +228,8 @@ export async function createExpense({ amount, description = '', account_id, note
 }
 
 export async function updateTransaction(id, updates) {
-  const userId = await getCurrentUserId();
-  const ref = doc(db, 'users', userId, 'transactions', String(id));
+  const profileId = await getActiveProfileId();
+  const ref = doc(db, 'profiles', profileId, 'transactions', String(id));
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
 

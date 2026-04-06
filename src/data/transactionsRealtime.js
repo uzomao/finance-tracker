@@ -1,4 +1,5 @@
-import { db, getCurrentUserId } from './firebaseClient';
+import { db } from './firebaseClient';
+import { getActiveProfileId } from './profileService';
 import {
   collection,
   onSnapshot,
@@ -17,29 +18,26 @@ function normaliseDate(value) {
   return value;
 }
 
-// Subscribe to transactions in Firestore in real time. Falls back to a single
-// IndexedDB fetch when Firebase is disabled or misconfigured.
-//
-// Returns an unsubscribe function.
+// Subscribe to transactions in Firestore in real time, scoped to the
+// current profile. Returns an unsubscribe function.
 export async function subscribeToTransactions(onData, onError) {
   if (!db) {
     if (onError) onError(new Error('Firestore is not configured.'));
     return () => {};
   }
 
-  const userId = await getCurrentUserId().catch((err) => {
+  const profileId = await getActiveProfileId().catch((err) => {
     if (onError) onError(err);
     return null;
   });
 
-  if (!userId) {
-    const data = await getLocalTransactions();
-    onData(data);
+  if (!profileId) {
+    if (onError) onError(new Error('No active profile.'));
     return () => {};
   }
 
-  const txCol = collection(db, 'users', userId, 'transactions');
-  const accCol = collection(db, 'users', userId, 'accounts');
+  const txCol = collection(db, 'profiles', profileId, 'transactions');
+  const accCol = collection(db, 'profiles', profileId, 'accounts');
 
   let accountsMap = new Map();
   let accountsLoaded = false;

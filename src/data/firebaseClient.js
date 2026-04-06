@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { USE_FIREBASE, firebaseConfig } from '../config';
 
@@ -41,10 +41,5 @@ export function getCurrentUserId() {
   if (auth.currentUser) {
     return Promise.resolve(auth.currentUser.uid);
   }
-
-  if (!userIdPromise) {
-    userIdPromise = signInAnonymously(auth).then((cred) => cred.user.uid);
-  }
-
-  return userIdPromise;
+  return Promise.reject(new Error('No authenticated user.'));
 }
