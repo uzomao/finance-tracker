@@ -7,6 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebaseClient';
 import { getActiveProfileId } from './profileService';
@@ -250,4 +251,46 @@ export async function updateTransaction(id, updates) {
     ...data,
     date: normaliseDate(data.date),
   };
+}
+
+export async function importTransactionsBatch(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { count: 0 };
+  }
+
+  const profileId = await getActiveProfileId();
+  const txCol = collection(db, 'profiles', profileId, 'transactions');
+  const batch = writeBatch(db);
+
+  rows.forEach((row) => {
+    let whenDate;
+    if (row.date && /^\d{4}-\d{2}-\d{2}$/.test(row.date)) {
+      const [y, m, d] = row.date.split('-').map((part) => Number(part));
+      whenDate = new Date(Date.UTC(y, m - 1, d));
+    } else if (row.date) {
+      const parsed = new Date(row.date);
+      whenDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+    } else {
+      whenDate = new Date();
+    }
+    const amount = Number(row.amount) || 0;
+    const description = row.description || '';
+    const accountId = row.account_id != null ? String(row.account_id) : null;
+    const notes = row.notes || '';
+
+    const ref = doc(txCol);
+    batch.set(ref, {
+      amount,
+      description,
+      type: 'expense',
+      account_id: accountId,
+      date: whenDate,
+      notes,
+      createdAt: serverTimestamp(),
+    });
+  });
+
+  await batch.commit();
+
+  return { count: rows.length };
 }

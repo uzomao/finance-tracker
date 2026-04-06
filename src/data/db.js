@@ -18,3 +18,4 @@ export const getTransactions = firebaseDb.getTransactions;
 export const createIncomeWithAllocations = firebaseDb.createIncomeWithAllocations;
 export const createExpense = firebaseDb.createExpense;
 export const updateTransaction = firebaseDb.updateTransaction;
+export const importTransactionsBatch = firebaseDb.importTransactionsBatch;
