@@ -37,7 +37,9 @@ function AccountBalance({ balance }) {
         Account Balance
       </p>
       <p className="mt-2 text-3xl md:text-4xl font-bold text-slate-900">
-        ₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <span className={balance < 0 ? 'trans-expense' : 'trans-income'}>
+          ₦{balance.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
       </p>
     </Card>
   );
@@ -164,6 +166,7 @@ function Dashboard() {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [totals, setTotals] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -200,8 +203,17 @@ function Dashboard() {
               };
             });
 
+            let totalIncome = 0;
+            let totalExpense = 0;
+            Object.values(stats).forEach((s) => {
+              totalIncome += s.income;
+              totalExpense += s.expense;
+            });
+            const balanceValue = totalIncome - totalExpense;
+
             setAccounts(accountsWithBalance);
             setTransactions(transactionsData.slice(0, 8));
+            setTotals({ totalIncome, totalExpense, balance: balanceValue });
             setLoading(false);
           },
           () => {
@@ -223,14 +235,7 @@ function Dashboard() {
       }
     };
   }, []);
-
-  const totalIncome = transactions
-    .filter((t) => t.type === 'income' && (t.account_id === null || t.account_id === undefined))
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpense = transactions
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const balance = totalIncome - totalExpense;
+  const { totalIncome, totalExpense, balance } = totals;
 
   if (loading) {
     return <p className="text-sm text-slate-500">Loading dashboard...</p>;

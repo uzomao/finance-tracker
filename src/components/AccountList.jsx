@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { deleteAccount as deleteAccountLocal } from '../data/db';
 import { subscribeToTransactions } from '../data/transactionsRealtime';
@@ -9,6 +9,8 @@ function AccountList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [accountStats, setAccountStats] = useState({});
+  const accountsRef = useRef([]);
+  const transactionsRef = useRef([]);
   const navigate = useNavigate();
 
   const naira = new Intl.NumberFormat('en-NG', {
@@ -21,12 +23,40 @@ function AccountList() {
     let cancelled = false;
     let unsubscribe = null;
 
+    const recomputeStats = () => {
+      const accountsList = accountsRef.current || [];
+      const transactions = transactionsRef.current || [];
+
+      const stats = {};
+      accountsList.forEach((acc) => {
+        stats[acc.id] = { income: 0, expense: 0, balance: 0 };
+      });
+
+      transactions.forEach((tx) => {
+        if (!tx.account_id || !stats[tx.account_id]) return;
+        if (tx.type === 'income') {
+          stats[tx.account_id].income += tx.amount;
+        } else if (tx.type === 'expense') {
+          stats[tx.account_id].expense += tx.amount;
+        }
+      });
+
+      Object.values(stats).forEach((s) => {
+        s.balance = s.income - s.expense;
+      });
+
+      setAccountStats(stats);
+      setLoading(false);
+    };
+
     (async () => {
       try {
         const unsubscribeAccounts = await subscribeToAccounts(
           (accountsData) => {
             if (cancelled) return;
             setAccounts(accountsData);
+            accountsRef.current = accountsData;
+            recomputeStats();
           },
           () => {
             if (cancelled) return;
@@ -38,27 +68,8 @@ function AccountList() {
         const unsubscribeTx = await subscribeToTransactions(
           (transactions) => {
             if (cancelled) return;
-
-            const stats = {};
-            accounts.forEach((acc) => {
-              stats[acc.id] = { income: 0, expense: 0, balance: 0 };
-            });
-
-            transactions.forEach((tx) => {
-              if (!tx.account_id || !stats[tx.account_id]) return;
-              if (tx.type === 'income') {
-                stats[tx.account_id].income += tx.amount;
-              } else if (tx.type === 'expense') {
-                stats[tx.account_id].expense += tx.amount;
-              }
-            });
-
-            Object.values(stats).forEach((s) => {
-              s.balance = s.income - s.expense;
-            });
-
-            setAccountStats(stats);
-            setLoading(false);
+            transactionsRef.current = transactions;
+            recomputeStats();
           },
           () => {
             if (cancelled) return;

@@ -350,6 +350,10 @@ function TransactionForm() {
 
   const hasInvalidCsvRows = csvRows.length > 0 && csvRows.some((row) => !isCsvRowValid(row));
 
+  const handleDeleteCsvRow = (rowId) => {
+    setCsvRows((prev) => prev.filter((row) => row.id !== rowId));
+  };
+
   const handleCsvSave = async () => {
     if (csvRows.length === 0 || hasInvalidCsvRows) return;
 
@@ -369,6 +373,7 @@ function TransactionForm() {
       const resultImport = await importTransactionsBatch(payload);
       setCsvResult(resultImport);
       setCsvRows([]);
+      navigate('/transactions');
     } catch (err) {
       setCsvError('Failed to save imported transactions. Please try again.');
     } finally {
@@ -688,6 +693,7 @@ function TransactionForm() {
                     <th className="px-3 py-2">Account</th>
                     <th className="px-3 py-2">Description</th>
                     <th className="px-3 py-2">Notes</th>
+                    <th className="px-3 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -745,6 +751,15 @@ function TransactionForm() {
                             onChange={(e) => updateCsvRowField(row.id, 'notes', e.target.value)}
                             className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none"
                           />
+                        </td>
+                        <td className="px-3 py-2 align-top text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCsvRow(row.id)}
+                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[0.7rem] font-medium text-rose-700 hover:bg-rose-100"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     );
