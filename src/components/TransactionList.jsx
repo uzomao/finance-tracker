@@ -203,38 +203,56 @@ function TransactionList() {
     }
   };
 
-  if (loading) return <p>Loading transactions...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <p className="text-sm text-slate-500">Loading transactions...</p>;
+  if (error) return <p className="text-sm text-rose-600">{error}</p>;
 
   return (
-    <div>
-      <h2>Transactions</h2>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <strong>Total Income:</strong> <span className='trans-income'>{naira.format(totalIncome)}</span> &nbsp; | &nbsp;
-        <strong>Total Expense:</strong> <span className='trans-expense'>{naira.format(totalExpense)}</span> &nbsp; | &nbsp;
-        <strong>Net Balance:</strong> <span className={netBalance >= 0 ? 'trans-income' : 'trans-expense'}>{naira.format(netBalance)}</span>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900">Transactions</h2>
       </div>
-      {transactions.length === 0 ? (
-        <p>No transactions found.</p>
-      ) : (
-        <>
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Account</th>
-                <th>Description</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm text-slate-700">
+          <span>
+            <span className="font-semibold">Total Income:</span>{' '}
+            <span className="trans-income">{naira.format(totalIncome)}</span>
+          </span>
+          <span>
+            <span className="font-semibold">Total Expense:</span>{' '}
+            <span className="trans-expense">{naira.format(totalExpense)}</span>
+          </span>
+          <span>
+            <span className="font-semibold">Net Balance:</span>{' '}
+            <span className={netBalance >= 0 ? 'trans-income' : 'trans-expense'}>
+              {naira.format(netBalance)}
+            </span>
+          </span>
+        </div>
+        {transactions.length === 0 ? (
+          <p className="text-sm text-slate-500">No transactions found.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-xs md:text-sm">
+                <thead className="bg-gray-50 text-[0.7rem] uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-2 py-2"></th>
+                    <th className="px-3 py-2">Description</th>
+                    <th className="px-3 py-2">Amount</th>
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">Account Debited</th>
+                    <th className="px-3 py-2">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
               {sortedMonths.map((monthKey) => {
                 const [year, month] = monthKey.split('-');
                 return [
-                  <tr key={monthKey} style={{ background: '#edf2f7' }}>
-                    <td colSpan={6} style={{ fontWeight: 'bold' }}>
+                  <tr key={monthKey} className="bg-gray-100">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-2 text-xs md:text-sm font-semibold text-slate-700"
+                    >
                       {monthNames[parseInt(month, 10) - 1]} {year}
                     </td>
                   </tr>,
@@ -247,9 +265,11 @@ function TransactionList() {
                     const rows = [
                       <tr
                         key={t.id}
-                        className={t.type === 'income' ? 'trans-income' : 'trans-expense'}
+                        className={`border-t border-gray-100 text-xs md:text-sm ${
+                          t.type === 'income' ? 'trans-income' : 'trans-expense'
+                        }`}
                       >
-                        <td>
+                        <td className="px-4 py-4 align-top">
                           {isParentIncome && childAllocations.length > 0 && (
                             <button
                               type="button"
@@ -259,40 +279,16 @@ function TransactionList() {
                                   [t.id]: !prev[t.id],
                                 }))
                               }
-                              style={{ padding: '0 0.4rem' }}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-xs leading-none hover:bg-gray-50"
                             >
                               {isExpanded ? '−' : '+'}
                             </button>
                           )}
                         </td>
-                        <td>{formatDate(t.date)}</td>
-                        <td>
-                          <input
-                            type="text"
-                            value={
-                              editRows[t.id]?.amountText ??
-                              (t.amount !== undefined && t.amount !== null
-                                ? plainAmountFormatter.format(t.amount)
-                                : '')
-                            }
-                            onChange={(e) => handleFieldChange(t, 'amount', e.target.value)}
-                            onBlur={() => handleBlurSave(t)}
-                            style={{
-                              width: '100%',
-                              border: 'none',
-                              outline: 'none',
-                              background: 'transparent',
-                              minWidth: '100px',
-                              textAlign: 'right',
-                            }}
-                          />
-                        </td>
-                        <td>{t.account_name || t.account_id}</td>
                         <td
-                          style={{
-                            verticalAlign: 'top',
-                            cursor: editRows[t.id]?.isEditingDescription ? 'text' : 'pointer',
-                          }}
+                          className={`px-3 py-4 align-top ${
+                            editRows[t.id]?.isEditingDescription ? 'cursor-text' : 'cursor-pointer'
+                          }`}
                           onClick={() => {
                             if (editRows[t.id]?.isEditingDescription) return;
                             setEditRows((prev) => ({
@@ -330,30 +326,42 @@ function TransactionList() {
                                   e.currentTarget.blur();
                                 }
                               }}
-                              style={{
-                                width: '100%',
-                                border: 'none',
-                                outline: 'none',
-                                background: 'transparent',
-                              }}
+                              className="w-full bg-transparent text-xs md:text-sm text-slate-800 focus:outline-none"
                             />
                           ) : (
                             <span
-                              style={{
-                                display: 'block',
-                                whiteSpace: 'pre-wrap',
-                                overflowWrap: 'break-word',
-                              }}
+                              className="block whitespace-pre-wrap break-words text-xs md:text-sm text-slate-700"
                             >
                               {t.description ?? ''}
                             </span>
                           )}
                         </td>
+                        <td className="px-3 py-4 text-left">
+                          <input
+                            type="text"
+                            value={
+                              editRows[t.id]?.amountText ??
+                              (t.amount !== undefined && t.amount !== null
+                                ? plainAmountFormatter.format(t.amount)
+                                : '')
+                            }
+                            onChange={(e) => handleFieldChange(t, 'amount', e.target.value)}
+                            onBlur={() => handleBlurSave(t)}
+                            className={`w-full min-w-[100px] bg-transparent text-left text-xs md:text-sm focus:outline-none focus:ring-0 border-none ${
+                              t.type === 'income' ? 'trans-income' : 'trans-expense'
+                            }`}
+                          />
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                          {formatDate(t.date)}
+                        </td>
+                        <td className="px-3 py-4 text-xs md:text-sm text-slate-700">
+                          {t.account_name || t.account_id}
+                        </td>
                         <td
-                          style={{
-                            verticalAlign: 'top',
-                            cursor: editRows[t.id]?.isEditingNotes ? 'text' : 'pointer',
-                          }}
+                          className={`px-3 py-2 align-top ${
+                            editRows[t.id]?.isEditingNotes ? 'cursor-text' : 'cursor-pointer'
+                          }`}
                           onClick={() => {
                             if (editRows[t.id]?.isEditingNotes) return;
                             setEditRows((prev) => ({
@@ -389,20 +397,11 @@ function TransactionList() {
                                   e.currentTarget.blur();
                                 }
                               }}
-                              style={{
-                                width: '100%',
-                                border: 'none',
-                                outline: 'none',
-                                background: 'transparent',
-                              }}
+                              className="w-full bg-transparent text-xs md:text-sm text-slate-800 focus:outline-none"
                             />
                           ) : (
                             <span
-                              style={{
-                                display: 'block',
-                                whiteSpace: 'pre-wrap',
-                                overflowWrap: 'break-word',
-                              }}
+                              className="block whitespace-pre-wrap break-words text-xs md:text-sm text-slate-700"
                             >
                               {t.notes ?? t.source ?? ''}
                             </span>
@@ -414,38 +413,17 @@ function TransactionList() {
                     if (isParentIncome && isExpanded && childAllocations.length > 0) {
                       childAllocations.forEach((a) => {
                         rows.push(
-                          <tr key={`${t.id}-${a.id}`} className="trans-income">
-                            <td></td>
-                            <td>{formatDate(a.date)}</td>
-                            <td>
-                              <input
-                                type="text"
-                                value={
-                                  editRows[a.id]?.amountText ??
-                                  (a.amount !== undefined && a.amount !== null
-                                    ? plainAmountFormatter.format(a.amount)
-                                    : '')
-                                }
-                                onChange={(e) => handleFieldChange(a, 'amount', e.target.value)}
-                                onBlur={() => handleBlurSave(a)}
-                                style={{
-                                  width: '100%',
-                                  border: 'none',
-                                  outline: 'none',
-                                  background: 'transparent',
-                                  minWidth: '100px',
-                                  textAlign: 'right',
-                                }}
-                              />
-                            </td>
-                            <td>{a.account_name || a.account_id}</td>
+                          <tr
+                            key={`${t.id}-${a.id}`}
+                            className="border-t border-gray-100 text-[0.65rem] md:text-xs trans-income"
+                          >
+                            <td className="px-6 py-2" />
                             <td
-                              style={{
-                                verticalAlign: 'top',
-                                cursor: editRows[a.id]?.isEditingDescription
-                                  ? 'text'
-                                  : 'pointer',
-                              }}
+                              className={`px-3 py-2 align-top ${
+                                editRows[a.id]?.isEditingDescription
+                                  ? 'cursor-text'
+                                  : 'cursor-pointer'
+                              }`}
                               onClick={() => {
                                 if (editRows[a.id]?.isEditingDescription) return;
                                 setEditRows((prev) => ({
@@ -485,32 +463,42 @@ function TransactionList() {
                                       e.currentTarget.blur();
                                     }
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    border: 'none',
-                                    outline: 'none',
-                                    background: 'transparent',
-                                  }}
+                                  className="w-full bg-transparent text-xs md:text-sm text-slate-800 focus:outline-none"
                                 />
                               ) : (
                                 <span
-                                  style={{
-                                    display: 'block',
-                                    whiteSpace: 'pre-wrap',
-                                    overflowWrap: 'break-word',
-                                  }}
+                                  className="block whitespace-pre-wrap break-words text-xs md:text-sm text-slate-700"
                                 >
                                   {a.description ?? ''}
                                 </span>
                               )}
                             </td>
+                            <td className="px-3 py-2 text-left">
+                              <input
+                                type="text"
+                                value={
+                                  editRows[a.id]?.amountText ??
+                                  (a.amount !== undefined && a.amount !== null
+                                    ? plainAmountFormatter.format(a.amount)
+                                    : '')
+                                }
+                                onChange={(e) => handleFieldChange(a, 'amount', e.target.value)}
+                                onBlur={() => handleBlurSave(a)}
+                                className={`w-full min-w-[100px] bg-transparent text-left text-xs md:text-sm focus:outline-none focus:ring-0 border-none ${
+                                  a.type === 'income' ? 'trans-income' : 'trans-expense'
+                                }`}
+                              />
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                              {formatDate(a.date)}
+                            </td>
+                            <td className="px-3 py-2 text-xs md:text-sm text-slate-700">
+                              {a.account_name || a.account_id}
+                            </td>
                             <td
-                              style={{
-                                verticalAlign: 'top',
-                                cursor: editRows[a.id]?.isEditingNotes
-                                  ? 'text'
-                                  : 'pointer',
-                              }}
+                              className={`px-3 py-2 align-top ${
+                                editRows[a.id]?.isEditingNotes ? 'cursor-text' : 'cursor-pointer'
+                              }`}
                               onClick={() => {
                                 if (editRows[a.id]?.isEditingNotes) return;
                                 setEditRows((prev) => ({
@@ -547,20 +535,11 @@ function TransactionList() {
                                       e.currentTarget.blur();
                                     }
                                   }}
-                                  style={{
-                                    width: '100%',
-                                    border: 'none',
-                                    outline: 'none',
-                                    background: 'transparent',
-                                  }}
+                                  className="w-full bg-transparent text-xs md:text-sm text-slate-800 focus:outline-none"
                                 />
                               ) : (
                                 <span
-                                  style={{
-                                    display: 'block',
-                                    whiteSpace: 'pre-wrap',
-                                    overflowWrap: 'break-word',
-                                  }}
+                                  className="block whitespace-pre-wrap break-words text-xs md:text-sm text-slate-700"
                                 >
                                   {a.notes ?? ''}
                                 </span>
@@ -578,25 +557,29 @@ function TransactionList() {
               })}
             </tbody>
           </table>
-          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              style={{ marginRight: 8 }}
-            >
-              Previous
-            </button>
+        </div>
+        <div className="mt-4 flex items-center justify-center gap-3 text-xs md:text-sm text-slate-700">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs md:text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span>
             Page {page} of {totalPages}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              style={{ marginLeft: 8 }}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs md:text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </>
+        )}
+      </div>
     </div>
   );
 }

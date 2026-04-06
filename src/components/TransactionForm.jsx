@@ -180,197 +180,269 @@ function TransactionForm() {
 
   if (result) {
     return (
-      <div>
-        <h2>{type === 'income' ? 'Income Allocated!' : 'Expense Recorded!'}</h2>
-        {type === 'income' ? (
-          <>
-            <p>Total Income Transaction ID: <span className='trans-income'>{result.totalIncomeId}</span></p>
-            <h3>Allocations:</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Account ID</th>
-                  <th>Amount</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.allocations.map((a, i) => (
-                  <tr key={i}>
-                    <td>{a.account_id}</td>
-                    <td>{a.amount.toFixed(2)}</td>
-                    <td>{a.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        ) : (
-          <>
-            <p>Expense Transaction ID: {result.id}</p>
-            <p>Amount: {result.amount}</p>
-            <p>Account ID: {result.account_id}</p>
-            <p>Description: {result.description}</p>
-          </>
-        )}
-        <button onClick={() => navigate('/accounts')}>Back to Accounts</button>
-        <button onClick={() => setResult(null)} style={{ marginLeft: 8 }}>Add Another</button>
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4">
+        <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2">
+            {type === 'income' ? 'Income Allocated' : 'Expense Recorded'}
+          </h2>
+          {type === 'income' ? (
+            <>
+              <p className="text-sm text-slate-700 mb-3">
+                Total Income Transaction ID:{' '}
+                <span className="font-semibold text-emerald-600">{result.totalIncomeId}</span>
+              </p>
+              <h3 className="text-sm font-semibold text-slate-800 mb-2">Allocations</h3>
+              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                <table className="min-w-full text-left text-xs md:text-sm">
+                  <thead className="bg-gray-50 text-slate-500 uppercase tracking-wide text-[0.7rem]">
+                    <tr>
+                      <th className="px-3 py-2">Account ID</th>
+                      <th className="px-3 py-2">Amount</th>
+                      <th className="px-3 py-2">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.allocations.map((a, i) => (
+                      <tr key={i} className="border-t border-gray-100">
+                        <td className="px-3 py-2 text-slate-700 text-xs md:text-sm">{a.account_id}</td>
+                        <td className="px-3 py-2 text-xs md:text-sm text-emerald-600 font-medium">
+                          {a.amount.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 text-slate-600 text-xs md:text-sm">{a.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1 text-sm text-slate-700">
+              <p>
+                Expense Transaction ID:{' '}
+                <span className="font-semibold">{result.id}</span>
+              </p>
+              <p>
+                Amount:{' '}
+                <span className="font-semibold text-rose-600">{result.amount}</span>
+              </p>
+              <p>
+                Account ID:{' '}
+                <span className="font-semibold">{result.account_id}</span>
+              </p>
+              <p>
+                Description:{' '}
+                <span className="font-medium">{result.description}</span>
+              </p>
+            </div>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/accounts')}
+              className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50"
+            >
+              Back to Accounts
+            </button>
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Add Another
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h2>Log {type.charAt(0).toUpperCase() + type.slice(1)}</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Type:</label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            disabled={loading || accountsLoading}
-          >
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-        </div>
-        {type === 'expense' && (
-          <div>
-            <label>Account:</label>
+    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4">
+      <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Log {type.charAt(0).toUpperCase() + type.slice(1)}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Type</label>
             <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              required
+              value={type}
+              onChange={(e) => setType(e.target.value)}
               disabled={loading || accountsLoading}
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
             >
-              <option value="">Select Account</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name}
-                </option>
-              ))}
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
             </select>
           </div>
-        )}
-        <div>
-          <label>Amount:</label>
-          <input
-            type="text"
-            value={amount}
-            onChange={handleAmountChange}
-            required
-            disabled={loading || accountsLoading}
-          />
-        </div>
-        <div>
-          <label>Description:</label>
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={loading || accountsLoading}
-            required
-          />
-        </div>
-        <div>
-          <label>Date:</label>
-          <input
-            type="text"
-            value={formatDate(date)}
-            onClick={() => {
-              if (hiddenDateInputRef.current) {
-                hiddenDateInputRef.current.showPicker?.();
-                hiddenDateInputRef.current.focus();
-              }
-            }}
-            readOnly
-            disabled={loading || accountsLoading}
-            required
-          />
-          <input
-            ref={hiddenDateInputRef}
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', height: 0, width: 0 }}
-            tabIndex={-1}
-          />
-        </div>
-        <div>
-          <label>Notes:</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={loading || accountsLoading}
-          />
-        </div>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading || accountsLoading}>
-          {loading ? (type === 'income' ? 'Allocating...' : 'Saving...') : (type === 'income' ? 'Allocate Income' : 'Save Expense')}
-        </button>
-        <br /><br />
-        {type === 'income' && incomeAllocations.length > 0 && (
-          <div style={{ margin: '1rem 0' }}>
-            <h4>Allocation Breakdown</h4>
-            <table>
-              <thead>
-                <tr>
-                  <th>Account</th>
-                  <th>Percentage</th>
-                  <th>Allocated Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incomeAllocations.map((a) => (
-                  <tr key={a.account_id}>
-                    <td>{a.account_name}</td>
-                    <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={a.percentage ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          const numeric = value === '' ? '' : Number(value);
-                          setIncomeAllocations((prev) => {
-                            const next = prev.map((row) =>
-                              row.account_id === a.account_id
-                                ? { ...row, percentage: numeric }
-                                : row
-                            );
-                            const numericAmountForAlloc = amount
-                              ? parseFloat(String(amount).replace(/,/g, ''))
-                              : NaN;
-                            if (!Number.isNaN(numericAmountForAlloc)) {
-                              return next.map((row) => ({
-                                ...row,
-                                amount:
-                                  (numericAmountForAlloc * (Number(row.percentage) || 0)) /
-                                  100,
-                              }));
-                            }
-                            return next;
-                          });
-                          setAllocationEdited(true);
-                        }}
-                        style={{ width: '25%', border: 'none', borderBottom: '1px solid #ccc', borderRadius: 0 }}
-                        disabled={loading || accountsLoading}
-                      />
-                      <span>{` `}%</span>
-                    </td>
-                    <td>{(Number(a.amount) || 0).toFixed(2)}</td>
-                  </tr>
+          {type === 'expense' && (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">Account</label>
+              <select
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+                disabled={loading || accountsLoading}
+                className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+              >
+                <option value="">Select Account</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
                 ))}
-              </tbody>
-            </table>
-            <p style={{ marginTop: '0.5rem' }}>
-              Total percentage: {totalPercentage.toFixed(2)}% &nbsp; | &nbsp;
-              Total allocated: {totalAllocated.toFixed(2)}
-            </p>
+              </select>
+            </div>
+          )}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Amount</label>
+            <input
+              type="text"
+              value={amount}
+              onChange={handleAmountChange}
+              required
+              disabled={loading || accountsLoading}
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
           </div>
-        )}
-      </form>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={loading || accountsLoading}
+              required
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Date</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formatDate(date)}
+                onClick={() => {
+                  if (hiddenDateInputRef.current) {
+                    hiddenDateInputRef.current.showPicker?.();
+                    hiddenDateInputRef.current.focus();
+                  }
+                }}
+                readOnly
+                disabled={loading || accountsLoading}
+                required
+                className="block w-full cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+              />
+              <input
+                ref={hiddenDateInputRef}
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="absolute inset-0 h-0 w-0 opacity-0 pointer-events-none"
+                tabIndex={-1}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700">Notes</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={loading || accountsLoading}
+              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+            />
+          </div>
+          {error && (
+            <p className="text-sm text-rose-600">
+              {error}
+            </p>
+          )}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading || accountsLoading}
+              className="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {loading
+                ? type === 'income'
+                  ? 'Allocating...'
+                  : 'Saving...'
+                : type === 'income'
+                  ? 'Allocate Income'
+                  : 'Save Expense'}
+            </button>
+          </div>
+
+          {type === 'income' && incomeAllocations.length > 0 && (
+            <div className="mt-4 space-y-3">
+              <h4 className="text-sm font-semibold text-slate-800">Allocation Breakdown</h4>
+              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                <table className="min-w-full text-left text-xs md:text-sm">
+                  <thead className="bg-gray-50 text-slate-500 uppercase tracking-wide text-[0.7rem]">
+                    <tr>
+                      <th className="px-3 py-2">Account</th>
+                      <th className="px-3 py-2">Percentage</th>
+                      <th className="px-3 py-2">Allocated Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomeAllocations.map((a) => (
+                      <tr key={a.account_id} className="border-t border-gray-100">
+                        <td className="px-3 py-2 text-slate-700">{a.account_name}</td>
+                        <td className="px-3 py-2 text-slate-700">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={a.percentage ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const numeric = value === '' ? '' : Number(value);
+                                setIncomeAllocations((prev) => {
+                                  const next = prev.map((row) =>
+                                    row.account_id === a.account_id
+                                      ? { ...row, percentage: numeric }
+                                      : row
+                                  );
+                                  const numericAmountForAlloc = amount
+                                    ? parseFloat(String(amount).replace(/,/g, ''))
+                                    : NaN;
+                                  if (!Number.isNaN(numericAmountForAlloc)) {
+                                    return next.map((row) => ({
+                                      ...row,
+                                      amount:
+                                        (numericAmountForAlloc * (Number(row.percentage) || 0)) /
+                                        100,
+                                    }));
+                                  }
+                                  return next;
+                                });
+                                setAllocationEdited(true);
+                              }}
+                              disabled={loading || accountsLoading}
+                              className="w-20 border-b border-gray-300 bg-transparent px-1 py-0.5 text-right text-xs md:text-sm text-slate-900 focus:border-blue-500 focus:outline-none"
+                            />
+                            <span className="text-xs text-slate-500">%</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-xs md:text-sm text-slate-700">
+                          {(Number(a.amount) || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-slate-600">
+                Total percentage: <span className="font-semibold">{totalPercentage.toFixed(2)}%</span>{' '}
+                &nbsp;|&nbsp; Total allocated:{' '}
+                <span className="font-semibold">{totalAllocated.toFixed(2)}</span>
+              </p>
+            </div>
+          )}
+        </form>
+      </div>
     </div>
   );
 }
