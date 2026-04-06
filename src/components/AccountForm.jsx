@@ -42,7 +42,7 @@ function AccountForm() {
     }
   }, [id, isEdit]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     if (!name || percentage === '') {
@@ -51,18 +51,18 @@ function AccountForm() {
     }
     setLoading(true);
     const payload = { name, percentage: parseFloat(percentage), keywords };
-    const action = isEdit
-      ? updateAccount(id, payload)
-      : createAccount(payload);
 
-    action
-      .then(() => {
-        navigate('/accounts');
-      })
-      .catch(() => {
-        setError('Failed to save account');
-        setLoading(false);
-      });
+    try {
+      if (isEdit) {
+        await updateAccount(id, payload);
+      } else {
+        await createAccount(payload);
+      }
+      navigate('/accounts');
+    } catch (err) {
+      setError('Failed to save account');
+      setLoading(false);
+    }
   };
 
   return (
