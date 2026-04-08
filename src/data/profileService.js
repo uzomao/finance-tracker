@@ -1,4 +1,15 @@
-import { collection, query, where, getDocs, addDoc, limit, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  limit,
+  serverTimestamp,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import { db, getCurrentUserId } from './firebaseClient';
 
 let activeProfile = null;
@@ -12,6 +23,15 @@ async function fetchOrCreateProfile() {
   const userId = await getCurrentUserId();
 
   const profilesCol = collection(db, 'profiles');
+  const canonicalRef = doc(profilesCol, userId);
+
+  // First preference: a canonical profile whose document ID is the uid.
+  const canonicalSnap = await getDoc(canonicalRef);
+  if (canonicalSnap.exists()) {
+    return { id: canonicalSnap.id, ...canonicalSnap.data() };
+  }
+
+  // Backwards compatibility: look for any legacy profile for this user.
   const q = query(profilesCol, where('ownerUserId', '==', userId), limit(1));
   const snap = await getDocs(q);
 
@@ -31,8 +51,8 @@ async function fetchOrCreateProfile() {
     createdAtClient: now.toISOString(),
   };
 
-  const docRef = await addDoc(profilesCol, data);
-  return { id: docRef.id, ...data };
+  await setDoc(canonicalRef, data);
+  return { id: canonicalRef.id, ...data };
 }
 
 // Resolve the current user's profile and cache it for reuse.
