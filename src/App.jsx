@@ -85,10 +85,10 @@ function ProfileDropdown({ onClose, onSignOut }) {
 
 function AppLayout() {
   const { user, signOutUser } = useAuthContext();
-  const { profile } = useProfileContext();
+  const { profile, loading, error } = useProfileContext();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  console.log('Profile from context:', profile);
+  console.log('Profile ctx:', { profile, loading, error });
 
   const displayName = profile?.displayName || user?.displayName || user?.email || 'User';
   const initials = displayName
