@@ -88,8 +88,6 @@ function AppLayout() {
   const { profile, loading, error } = useProfileContext();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  console.log('Profile ctx:', { profile, loading, error });
-
   const displayName = profile?.displayName || user?.displayName || user?.email || 'User';
   const initials = displayName
     .split(' ')
