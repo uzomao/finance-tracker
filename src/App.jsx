@@ -88,7 +88,6 @@ function AppLayout() {
   const { profile } = useProfileContext();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const { profile } = useProfileContext();
   console.log('Profile from context:', profile);
 
   const displayName = profile?.displayName || user?.displayName || user?.email || 'User';
